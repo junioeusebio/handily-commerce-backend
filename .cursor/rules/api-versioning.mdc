@@ -1,0 +1,34 @@
+---
+description: Versionamento de API via Api:Version / ApiOptions — rotas e OpenAPI sincronizados.
+globs:
+  - "src/HandilyCommerce.Api/**/*.cs"
+  - "src/HandilyCommerce.Api/appsettings*.json"
+  - "**/*.http"
+---
+
+# Versionamento da API
+
+## Fonte da verdade
+
+Secao `Api` em `appsettings.json`:
+
+```json
+"Api": {
+  "RoutePrefix": "api",
+  "Version": "v1",
+  "Title": "Handily Commerce API"
+}
+```
+
+Bound a `ApiOptions` via `IOptions<ApiOptions>`.
+
+## Regras
+
+1. **Nunca** hardcodar `/api/v1/` em `Program.cs` — usar `apiOptions.Path("...")`.
+2. OpenAPI `Info.Version` / `Info.Title` via document transformer no `AddOpenApi`.
+3. Arquivos `.http`: variavel `@ApiVersion` alinhada a `Api:Version`.
+4. Breaking change: alterar `Api:Version` (ex. `v2`) ou evoluir estrategia multi-documento depois — documentar no PR.
+
+## Como mudar a versao
+
+Editar `Api:Version` em `appsettings.json` (e Development se necessario) e atualizar `@ApiVersion` no `.http`. Rebuild/restart — a rota e o OpenAPI acompanham.

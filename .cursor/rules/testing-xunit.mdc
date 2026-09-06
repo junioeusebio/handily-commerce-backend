@@ -1,0 +1,27 @@
+---
+description: Testes xUnit (planejado) — unit e integracao leve alinhados ao hexagonal.
+globs:
+  - "tests/**/*.cs"
+  - "**/*Tests.cs"
+  - "**/*Test.cs"
+---
+
+# Testes (xUnit — futuro)
+
+## Plano
+
+- Framework: **xUnit**
+- Projetos previstos: `tests/HandilyCommerce.Application.Tests`, etc.
+- Unit: Application/Domain sem I/O real
+- Integracao leve: Api + `WebApplicationFactory` quando fizer sentido
+
+## Convencoes (quando existirem)
+
+- Nome: `Metodo_Cenario_Resultado` ou `Should_..._When_...`
+- Um assert logico por teste (varios asserts OK se descrevem o mesmo resultado)
+- Fakes/stubs de ports; nao bater em rede/DB em unit tests
+- Cobrir a parte/patch na mesma PR quando a logica nao for trivial
+
+## Hoje
+
+Ainda nao ha projeto de testes na solucao — ao adicionar, seguir esta rule e a skill `xunit-testing`.

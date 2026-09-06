@@ -1,12 +1,38 @@
+using HandilyCommerce.Api.Options;
+using HandilyCommerce.Application.DependencyInjection;
+using HandilyCommerce.Infrastructure.DependencyInjection;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
+using Microsoft.OpenApi;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.Configure<ApiOptions>(builder.Configuration.GetSection(ApiOptions.SectionName));
+
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        var api = context.ApplicationServices
+            .GetRequiredService<IOptions<ApiOptions>>()
+            .Value;
+
+        document.Info ??= new OpenApiInfo();
+        document.Info.Title = api.Title;
+        document.Info.Version = api.Version;
+
+        return Task.CompletedTask;
+    });
+});
+
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+var apiOptions = app.Services.GetRequiredService<IOptions<ApiOptions>>().Value;
+var healthPath = apiOptions.Path("health");
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -14,11 +40,25 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/api/health", () => Results.Ok(new
+app.MapHealthChecks(healthPath, new HealthCheckOptions
 {
-    status = "ok",
-    service = "handily-commerce-backend"
-}))
-.WithName("GetHealth");
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+
+        var service = report.Entries
+            .SelectMany(e => e.Value.Data)
+            .FirstOrDefault(kv => kv.Key == "service")
+            .Value?
+            .ToString()
+            ?? "handily-commerce-backend";
+
+        await context.Response.WriteAsJsonAsync(new
+        {
+            status = report.Status.ToString(),
+            service
+        });
+    }
+});
 
 app.Run();

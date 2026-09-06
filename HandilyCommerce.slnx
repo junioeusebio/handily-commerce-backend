@@ -1,5 +1,8 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/HandilyCommerce.Api/HandilyCommerce.Api.csproj" />
+    <Project Path="src/HandilyCommerce.Application/HandilyCommerce.Application.csproj" />
+    <Project Path="src/HandilyCommerce.Domain/HandilyCommerce.Domain.csproj" />
+    <Project Path="src/HandilyCommerce.Infrastructure/HandilyCommerce.Infrastructure.csproj" />
   </Folder>
 </Solution>

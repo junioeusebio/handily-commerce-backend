@@ -1,6 +1,10 @@
 @HandilyCommerce.Api_HostAddress = http://localhost:5000
+# Keep in sync with Api:Version in appsettings.json (default v1).
+@ApiVersion = v1
+@ApiRoutePrefix = api
 
-GET {{HandilyCommerce.Api_HostAddress}}/api/health
+### Health check
+GET {{HandilyCommerce.Api_HostAddress}}/{{ApiRoutePrefix}}/{{ApiVersion}}/health
 Accept: application/json
 
 ###

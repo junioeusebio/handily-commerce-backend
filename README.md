@@ -15,11 +15,28 @@ Backend pair of the frontend: https://github.com/junioeusebio/handily-commerce-f
 dotnet run --project src/HandilyCommerce.Api
 ```
 
-Health check: `GET /api/health` → `{ "status": "ok", "service": "handily-commerce-backend" }`
+### Health check
 
-OpenAPI is available in Development (see template defaults).
+`GET /{Api:RoutePrefix}/{Api:Version}/health` — today that resolves to **`GET /api/v1/health`**.
 
-## Structure
+The version is **configuration-driven** (`Api:Version` in `appsettings.json`). Changing it to `v2` updates the HTTP route **without** editing `Program.cs`.
+
+Example response: `{ "status": "Healthy", "service": "handily-commerce-backend" }`
+
+OpenAPI (`MapOpenApi`) is available in Development. Document **Info.Title** / **Info.Version** come from the same `Api` section, so future Swagger UI stays in sync.
+
+See `HandilyCommerce.Api.http` — use `@ApiVersion` (must match `Api:Version`).
+
+## Structure (hexagonal)
+
+```
+src/
+  HandilyCommerce.Domain/           # core domain (no layer deps)
+  HandilyCommerce.Application/      # use cases; refs Domain
+  HandilyCommerce.Infrastructure/   # outbound adapters; refs Application + Domain
+  HandilyCommerce.Api/              # inbound HTTP; refs Application + Infrastructure
+```
 
 - `HandilyCommerce.slnx` — solution
-- `src/HandilyCommerce.Api` — Web API project (`net10.0`)
+- See [ARCHITECTURE.md](ARCHITECTURE.md) for ports/adapters and API versioning notes.
+- Cursor agents/rules: [AGENTS.md](AGENTS.md) and `.cursor/`

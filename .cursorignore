@@ -1,0 +1,13 @@
+# Build e artefatos
+**/bin/
+**/obj/
+**/out/
+TestResults/
+coverage/
+*.user
+*.suo
+.vs/
+
+# caches / OS
+.DS_Store
+*.DotSettings.user

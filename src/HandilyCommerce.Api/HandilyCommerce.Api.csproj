@@ -10,4 +10,9 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\HandilyCommerce.Application\HandilyCommerce.Application.csproj" />
+    <ProjectReference Include="..\HandilyCommerce.Infrastructure\HandilyCommerce.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>
