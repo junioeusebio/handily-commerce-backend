@@ -15,7 +15,11 @@ Backend pair of the frontend: https://github.com/junioeusebio/handily-commerce-f
 dotnet run --project src/HandilyCommerce.Api
 ```
 
-Health check: `GET /api/health` → `{ "status": "ok", "service": "handily-commerce-backend" }`
+### Health check
+
+`GET /api/health` — ASP.NET Core health checks endpoint.
+
+Example response: `{ "status": "Healthy", "service": "handily-commerce-backend" }`
 
 OpenAPI is available in Development (see template defaults).
 
