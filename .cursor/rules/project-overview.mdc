@@ -1,0 +1,38 @@
+---
+description: Visao geral do Handily Commerce Backend — stack, hexagonal, PRs diarios e vocabulario.
+alwaysApply: true
+---
+
+# Handily Commerce Backend — visao geral
+
+API ASP.NET Core **.NET 10** com layout **hexagonal (ports & adapters)** e **um PR (parte/patch) por dia**.
+
+## Stack
+
+- .NET 10 (`net10.0`), Minimal APIs / composition root em `HandilyCommerce.Api`
+- Camadas: Domain → Application → Infrastructure + Api
+- OpenAPI nativo (`Microsoft.AspNetCore.OpenApi`); Swagger UI planejado
+- Versao da API via config `Api:Version` (hoje `v1`) — sem hardcode de rota em `Program.cs`
+- Testes: **xUnit** (planejado; ver rule `testing-xunit`)
+
+## Projetos
+
+| Projeto | Papel |
+| --- | --- |
+| `HandilyCommerce.Domain` | Modelos e ports; sem ASP.NET / I/O |
+| `HandilyCommerce.Application` | Casos de uso; implementa ports |
+| `HandilyCommerce.Infrastructure` | Adaptadores de saida (DB, health bridge, etc.) |
+| `HandilyCommerce.Api` | Adaptador HTTP + composition root |
+
+Detalhes em `ARCHITECTURE.md`.
+
+## Fluxo de trabalho
+
+- Diff pequeno e focado — um tema por PR (parte/patch).
+- Nunca pedir PAT/token; usar `gh` ja autenticado.
+- Vocabulario: use **parte/patch**, nunca a palavra portuguesa "fatia".
+- Mudancas so de tooling Cursor nao devem alterar codigo da API salvo necessidade explicita.
+
+## Agentes e skills
+
+Ver `AGENTS.md` e `.cursor/skills/` para geracao, refactor hexagonal e testes xUnit (futuro).

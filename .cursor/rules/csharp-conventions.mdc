@@ -1,0 +1,26 @@
+---
+description: Convencoes C# / .NET 10 — nullable, naming, DI e arquivos.
+globs:
+  - "src/**/*.cs"
+---
+
+# Convencoes C#
+
+## Projeto
+
+- `nullable` enable, `ImplicitUsings` enable, target `net10.0`
+- Namespaces alinhados a pasta (`HandilyCommerce.{Layer}.{Feature}`)
+- Arquivos PascalCase espelhando o tipo principal
+
+## DI e opcoes
+
+- Extensoes `AddApplication()` / `AddInfrastructure()` nas camadas
+- Config tipada com `IOptions<T>` (ex.: `ApiOptions` na Api)
+- Preferir `GetRequiredService` / injection explicita no composition root
+
+## Estilo
+
+- Preferir `sealed` em tipos nao pensados para heranca
+- Primary constructors quando simplificarem
+- Evitar magic strings de rota: montar path a partir de `ApiOptions`
+- Mensagens e docs em PT ou bilingue, consistente com o arquivo vizinho

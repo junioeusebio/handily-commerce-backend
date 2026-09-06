@@ -1,0 +1,32 @@
+---
+description: Fronteiras hexagonais — direcao de dependencias Domain/Application/Infrastructure/Api.
+globs:
+  - "src/**/*.cs"
+---
+
+# Hexagonal (ports & adapters)
+
+## Direcao de dependencias (permitido)
+
+```
+Api → Application
+Api → Infrastructure
+Infrastructure → Application
+Infrastructure → Domain
+Application → Domain
+Domain → (nada das outras camadas)
+```
+
+## Regras
+
+- **Domain**: ports (`I*Port`) e modelos puros; sem `Microsoft.AspNetCore.*`, EF, HTTP.
+- **Application**: implementa ports; orquestra regras; sem detalhes de transporte/persistencia.
+- **Infrastructure**: adaptadores de saida (EF, HTTP clients, health `IHealthCheck`, filas).
+- **Api**: adaptadores de entrada (endpoints, DI, OpenAPI, binding de `ApiOptions`).
+
+## Checklist de review
+
+- [ ] Domain nao referencia projetos externos da solucao
+- [ ] Novos use cases entram em Application; ports em Domain quando forem contrato de negocio
+- [ ] Persistencia/mensageria so em Infrastructure
+- [ ] Parte/patch pequena; um tema por PR
