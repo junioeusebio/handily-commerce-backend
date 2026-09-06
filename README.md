@@ -17,11 +17,15 @@ dotnet run --project src/HandilyCommerce.Api
 
 ### Health check
 
-`GET /api/v1/health` — versioned ASP.NET Core health checks endpoint.
+`GET /{Api:RoutePrefix}/{Api:Version}/health` — today that resolves to **`GET /api/v1/health`**.
+
+The version is **configuration-driven** (`Api:Version` in `appsettings.json`). Changing it to `v2` updates the HTTP route **without** editing `Program.cs`.
 
 Example response: `{ "status": "Healthy", "service": "handily-commerce-backend" }`
 
-OpenAPI is available in Development (see template defaults).
+OpenAPI (`MapOpenApi`) is available in Development. Document **Info.Title** / **Info.Version** come from the same `Api` section, so future Swagger UI stays in sync.
+
+See `HandilyCommerce.Api.http` — use `@ApiVersion` (must match `Api:Version`).
 
 ## Structure (hexagonal)
 
@@ -35,3 +39,4 @@ src/
 
 - `HandilyCommerce.slnx` — solution
 - See [ARCHITECTURE.md](ARCHITECTURE.md) for ports/adapters and API versioning notes.
+- Cursor agents/rules: [AGENTS.md](AGENTS.md) and `.cursor/`

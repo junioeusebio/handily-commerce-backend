@@ -1,14 +1,37 @@
+using HandilyCommerce.Api.Options;
 using HandilyCommerce.Application.DependencyInjection;
 using HandilyCommerce.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
+builder.Services.Configure<ApiOptions>(builder.Configuration.GetSection(ApiOptions.SectionName));
+
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        var api = context.ApplicationServices
+            .GetRequiredService<IOptions<ApiOptions>>()
+            .Value;
+
+        document.Info ??= new OpenApiInfo();
+        document.Info.Title = api.Title;
+        document.Info.Version = api.Version;
+
+        return Task.CompletedTask;
+    });
+});
+
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
 
 var app = builder.Build();
+
+var apiOptions = app.Services.GetRequiredService<IOptions<ApiOptions>>().Value;
+var healthPath = apiOptions.Path("health");
 
 if (app.Environment.IsDevelopment())
 {
@@ -17,7 +40,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapHealthChecks("/api/v1/health", new HealthCheckOptions
+app.MapHealthChecks(healthPath, new HealthCheckOptions
 {
     ResponseWriter = async (context, report) =>
     {
