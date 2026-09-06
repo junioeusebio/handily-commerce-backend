@@ -1,7 +1,7 @@
 @HandilyCommerce.Api_HostAddress = http://localhost:5000
 
 ### Health check
-GET {{HandilyCommerce.Api_HostAddress}}/api/health
+GET {{HandilyCommerce.Api_HostAddress}}/api/v1/health
 Accept: application/json
 
 ###

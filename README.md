@@ -17,13 +17,21 @@ dotnet run --project src/HandilyCommerce.Api
 
 ### Health check
 
-`GET /api/health` — ASP.NET Core health checks endpoint.
+`GET /api/v1/health` — versioned ASP.NET Core health checks endpoint.
 
 Example response: `{ "status": "Healthy", "service": "handily-commerce-backend" }`
 
 OpenAPI is available in Development (see template defaults).
 
-## Structure
+## Structure (hexagonal)
+
+```
+src/
+  HandilyCommerce.Domain/           # core domain (no layer deps)
+  HandilyCommerce.Application/      # use cases; refs Domain
+  HandilyCommerce.Infrastructure/   # outbound adapters; refs Application + Domain
+  HandilyCommerce.Api/              # inbound HTTP; refs Application + Infrastructure
+```
 
 - `HandilyCommerce.slnx` — solution
-- `src/HandilyCommerce.Api` — Web API project (`net10.0`)
+- See [ARCHITECTURE.md](ARCHITECTURE.md) for ports/adapters and API versioning notes.

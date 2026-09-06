@@ -1,15 +1,15 @@
+using HandilyCommerce.Application.DependencyInjection;
+using HandilyCommerce.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks();
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -17,15 +17,23 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapHealthChecks("/api/health", new HealthCheckOptions
+app.MapHealthChecks("/api/v1/health", new HealthCheckOptions
 {
     ResponseWriter = async (context, report) =>
     {
         context.Response.ContentType = "application/json";
+
+        var service = report.Entries
+            .SelectMany(e => e.Value.Data)
+            .FirstOrDefault(kv => kv.Key == "service")
+            .Value?
+            .ToString()
+            ?? "handily-commerce-backend";
+
         await context.Response.WriteAsJsonAsync(new
         {
             status = report.Status.ToString(),
-            service = "handily-commerce-backend"
+            service
         });
     }
 });
