@@ -61,4 +61,4 @@ app.MapHealthChecks(healthPath, new HealthCheckOptions
     }
 });
 
-app.Run();
+await app.RunAsync();
