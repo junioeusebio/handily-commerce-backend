@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <!-- Coverlet.msbuild: enable in CI with /p:CollectCoverage=true -->
+    <CoverletOutputFormat>opencover,cobertura</CoverletOutputFormat>
+    <CoverletOutput>$(MSBuildThisFileDirectory)../coverage/$(MSBuildProjectName)/</CoverletOutput>
+    <Threshold>80</Threshold>
+    <ThresholdType>line</ThresholdType>
+    <ThresholdStat>total</ThresholdStat>
+    <ExcludeByFile>**/Program.cs</ExcludeByFile>
+    <Exclude>[*.Tests]*</Exclude>
+    <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
+  </PropertyGroup>
+</Project>

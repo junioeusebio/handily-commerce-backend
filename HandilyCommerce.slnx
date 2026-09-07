@@ -5,4 +5,10 @@
     <Project Path="src/HandilyCommerce.Domain/HandilyCommerce.Domain.csproj" />
     <Project Path="src/HandilyCommerce.Infrastructure/HandilyCommerce.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/HandilyCommerce.Api.Tests/HandilyCommerce.Api.Tests.csproj" />
+    <Project Path="tests/HandilyCommerce.Application.Tests/HandilyCommerce.Application.Tests.csproj" />
+    <Project Path="tests/HandilyCommerce.Domain.Tests/HandilyCommerce.Domain.Tests.csproj" />
+    <Project Path="tests/HandilyCommerce.Infrastructure.Tests/HandilyCommerce.Infrastructure.Tests.csproj" />
+  </Folder>
 </Solution>
