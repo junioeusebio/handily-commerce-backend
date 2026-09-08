@@ -8,3 +8,9 @@ GET {{HandilyCommerce.Api_HostAddress}}/{{ApiRoutePrefix}}/{{ApiVersion}}/health
 Accept: application/json
 
 ###
+
+### Ping / version
+GET {{HandilyCommerce.Api_HostAddress}}/{{ApiRoutePrefix}}/{{ApiVersion}}/ping
+Accept: application/json
+
+###

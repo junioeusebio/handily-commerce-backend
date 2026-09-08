@@ -20,6 +20,12 @@ Dependency direction: **Api → Application + Infrastructure → Domain** (Infra
 - Infrastructure: `ApplicationHealthCheck` adapts the port to `IHealthCheck`
 - Api maps health with a JSON `ResponseWriter` at a path built from `ApiOptions` (e.g. `/api/v1/health` today)
 
+## Ping / version
+
+- Domain port: `IPingPort` → `ServicePing` (`service`, `apiVersion`, `status`)
+- Application: `PingService` builds an `ok` probe; `apiVersion` is supplied by the Api adapter from `Api:Version`
+- Api: thin `MapGet` at `apiOptions.Path("ping")` (e.g. `/api/v1/ping` today)
+
 ## API versioning (configuration-driven)
 
 HTTP routes are built from the `Api` section in `appsettings.json`:
