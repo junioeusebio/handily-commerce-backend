@@ -8,6 +8,14 @@ using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Render (and similar hosts) inject PORT; bind explicitly when present.
+// ListenAnyIP avoids a literal http:// URL (Sonar S5332); TLS ends at the edge.
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port) && int.TryParse(port, out var portNumber))
+{
+    builder.WebHost.ConfigureKestrel(options => options.ListenAnyIP(portNumber));
+}
+
 builder.Services.Configure<ApiOptions>(builder.Configuration.GetSection(ApiOptions.SectionName));
 
 builder.Services.AddOpenApi(options =>
@@ -38,9 +46,8 @@ var pingPath = apiOptions.Path("ping");
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseHttpsRedirection();
 }
-
-app.UseHttpsRedirection();
 
 app.MapHealthChecks(healthPath, new HealthCheckOptions
 {
