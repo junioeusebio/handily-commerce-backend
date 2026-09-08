@@ -21,9 +21,11 @@ RUN dotnet publish src/HandilyCommerce.Api/HandilyCommerce.Api.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
-COPY --from=build /app/publish .
+COPY --from=build --chown=$APP_UID:$APP_UID /app/publish .
+
+USER $APP_UID
 
 EXPOSE 8080
-ENV ASPNETCORE_URLS=http://0.0.0.0:8080
+ENV ASPNETCORE_URLS=http://+:8080
 
 ENTRYPOINT ["dotnet", "HandilyCommerce.Api.dll"]
