@@ -1,5 +1,6 @@
 using HandilyCommerce.Api.Options;
 using HandilyCommerce.Application.DependencyInjection;
+using HandilyCommerce.Domain.Ping;
 using HandilyCommerce.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
@@ -32,6 +33,7 @@ var app = builder.Build();
 
 var apiOptions = app.Services.GetRequiredService<IOptions<ApiOptions>>().Value;
 var healthPath = apiOptions.Path("health");
+var pingPath = apiOptions.Path("ping");
 
 if (app.Environment.IsDevelopment())
 {
@@ -60,5 +62,8 @@ app.MapHealthChecks(healthPath, new HealthCheckOptions
         });
     }
 });
+
+app.MapGet(pingPath, (IOptions<ApiOptions> options, IPingPort pingPort) =>
+    Results.Json(pingPort.GetPing(options.Value.Version)));
 
 await app.RunAsync();

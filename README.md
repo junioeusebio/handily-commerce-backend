@@ -27,6 +27,16 @@ The version is **configuration-driven** (`Api:Version` in `appsettings.json`). C
 
 Example response: `{ "status": "Healthy", "service": "handily-commerce-backend" }`
 
+### Ping / version
+
+`GET /{Api:RoutePrefix}/{Api:Version}/ping` — today **`GET /api/v1/ping`**.
+
+Stable JSON contract; `apiVersion` comes from the same `Api:Version` config (not hardcoded):
+
+```json
+{ "service": "handily-commerce-backend", "apiVersion": "v1", "status": "ok" }
+```
+
 OpenAPI (`MapOpenApi`) is available in Development. Document **Info.Title** / **Info.Version** come from the same `Api` section, so future Swagger UI stays in sync.
 
 See `HandilyCommerce.Api.http` — use `@ApiVersion` (must match `Api:Version`).
