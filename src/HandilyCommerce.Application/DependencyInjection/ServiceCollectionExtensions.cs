@@ -1,5 +1,7 @@
+using HandilyCommerce.Application.ApiVersion;
 using HandilyCommerce.Application.Health;
 using HandilyCommerce.Application.Ping;
+using HandilyCommerce.Domain.ApiVersion;
 using HandilyCommerce.Domain.Health;
 using HandilyCommerce.Domain.Ping;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +14,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<IHealthPort, HealthService>();
         services.AddSingleton<IPingPort, PingService>();
+        services.AddSingleton<IApiVersionPort, ApiVersionService>();
         return services;
     }
 }

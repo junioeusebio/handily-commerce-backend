@@ -1,6 +1,8 @@
+using HandilyCommerce.Application.ApiVersion;
 using HandilyCommerce.Application.DependencyInjection;
 using HandilyCommerce.Application.Health;
 using HandilyCommerce.Application.Ping;
+using HandilyCommerce.Domain.ApiVersion;
 using HandilyCommerce.Domain.Health;
 using HandilyCommerce.Domain.Ping;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,6 +40,22 @@ public class ServiceCollectionExtensionsTests
         Assert.Equal(ServicePing.Ok, ping.Status);
         Assert.Equal("v1", ping.ApiVersion);
         Assert.Equal(ServicePing.ServiceName, ping.Service);
+    }
+
+    [Fact]
+    public void AddApplication_RegistersApiVersionServiceAsIApiVersionPort()
+    {
+        var services = new ServiceCollection();
+
+        services.AddApplication();
+
+        using var provider = services.BuildServiceProvider();
+        var port = provider.GetRequiredService<IApiVersionPort>();
+
+        Assert.IsType<ApiVersionService>(port);
+        var apiVersion = port.GetApiVersion("v1");
+        Assert.Equal("v1", apiVersion.Version);
+        Assert.Equal(ServiceApiVersion.ServiceName, apiVersion.Service);
     }
 
     [Fact]
