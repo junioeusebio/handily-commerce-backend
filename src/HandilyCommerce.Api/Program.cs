@@ -8,6 +8,13 @@ using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Render (and similar hosts) inject PORT; bind explicitly when present.
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 builder.Services.Configure<ApiOptions>(builder.Configuration.GetSection(ApiOptions.SectionName));
 
 builder.Services.AddOpenApi(options =>
@@ -38,9 +45,9 @@ var pingPath = apiOptions.Path("ping");
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    // TLS terminates at the Render edge; skip HTTPS redirection in Production.
+    app.UseHttpsRedirection();
 }
-
-app.UseHttpsRedirection();
 
 app.MapHealthChecks(healthPath, new HealthCheckOptions
 {

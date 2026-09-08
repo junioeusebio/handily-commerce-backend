@@ -54,3 +54,21 @@ src/
 - `HandilyCommerce.slnx` — solution
 - See [ARCHITECTURE.md](ARCHITECTURE.md) for ports/adapters and API versioning notes.
 - Cursor agents/rules: [AGENTS.md](AGENTS.md) and `.cursor/`
+
+
+## Deploy on Render (free, no database)
+
+This repo includes a Docker image (`Dockerfile`) and a Render Blueprint (`render.yaml`) for a **free** web service — **no Postgres/database** yet.
+
+1. Create a [Render](https://render.com) account and connect the GitHub repo `junioeusebio/handily-commerce-backend`.
+2. Use **New → Blueprint** and select this repository (Render reads `render.yaml`), or create a **Web Service** with Docker runtime pointing at `./Dockerfile`.
+3. Choose the **free** plan. Expect **cold starts** after idle (first request can take several seconds).
+4. Health check: `GET /api/v1/health` (also configured as `healthCheckPath` in the Blueprint).
+5. No database resources are provisioned in `render.yaml` for now — add Postgres later when needed.
+
+Local Docker (optional):
+
+```bash
+docker build -t handily-commerce-backend .
+docker run --rm -p 8080:8080 -e ASPNETCORE_ENVIRONMENT=Production handily-commerce-backend
+```
