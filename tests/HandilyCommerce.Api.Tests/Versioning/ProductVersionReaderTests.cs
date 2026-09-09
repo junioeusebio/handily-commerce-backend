@@ -31,7 +31,7 @@ public class ProductVersionReaderTests
     }
 
     [Fact]
-    public void FromAssembly_ApiProject_ExposesProductSemverFromDirectoryBuildProps()
+    public void FromAssembly_ApiProject_ExposesProductVersioningFromDirectoryBuildProps()
     {
         var apiAssembly = typeof(ProductVersionReader).Assembly;
         var version = ProductVersionReader.FromAssembly(apiAssembly);

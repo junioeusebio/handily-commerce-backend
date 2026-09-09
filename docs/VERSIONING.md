@@ -18,7 +18,7 @@ Há duas versões distintas:
 
 | O quê | Onde | Uso |
 | --- | --- | --- |
-| **Produto (semver)** | `Directory.Build.props` → `<Version>` | Rodapé FE (**API**), campo `version` em `GET /api/v1/apiVersion` |
+| **Produto (Versioning)** | `Directory.Build.props` → `<Version>` | Rodapé FE (**API**), campo `version` em `GET /api/v1/apiVersion` |
 | **Rota da API** | `appsettings` → `Api:Version` (ex.: `v1`) | Segmento de URL `/api/v1/...` e campo opcional `apiRouteVersion` |
 
 Quem abre o PR deve:

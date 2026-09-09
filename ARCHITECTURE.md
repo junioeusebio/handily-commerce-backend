@@ -29,7 +29,7 @@ Dependency direction: **Api → Application + Infrastructure → Domain** (Infra
 ## API version (FE footer)
 
 - Domain port: `IApiVersionPort` → `ServiceApiVersion` (`version`, `service`, `apiRouteVersion`)
-- **Product semver** (`version`): from assembly InformationalVersion / `Directory.Build.props` `<Version>` (e.g. `0.1.0`) — what the FE footer shows as API
+- **Product Versioning** (`version`): from assembly InformationalVersion / `Directory.Build.props` `<Version>` (e.g. `0.1.0`) — what the FE footer shows as API
 - **Route version** (`apiRouteVersion`): from `Api:Version` (e.g. `v1`) — URL segment only
 - Application: `ApiVersionService` builds the payload; Api adapter supplies both values
 - Api: thin `MapGet` at `apiOptions.Path("apiVersion")` (e.g. `/api/v1/apiVersion` today)

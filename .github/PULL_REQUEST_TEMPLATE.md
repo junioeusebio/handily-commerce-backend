@@ -1,4 +1,4 @@
-## Semver (obrigatório)
+## Versioning (obrigatório)
 
 Escolha **exatamente um** label de release neste PR:
 

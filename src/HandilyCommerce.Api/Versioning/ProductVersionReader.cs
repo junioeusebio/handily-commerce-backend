@@ -3,7 +3,7 @@ using System.Reflection;
 namespace HandilyCommerce.Api.Versioning;
 
 /// <summary>
-/// Reads product semver stamped by MSBuild (<c>Directory.Build.props</c> → <c>Version</c> / InformationalVersion).
+/// Reads product Versioning stamped by MSBuild (<c>Directory.Build.props</c> → <c>Version</c> / InformationalVersion).
 /// </summary>
 public static class ProductVersionReader
 {

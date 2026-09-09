@@ -1,4 +1,4 @@
-name: PR Semver Label
+name: PR Release label
 
 on:
   pull_request:

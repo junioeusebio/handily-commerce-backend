@@ -45,14 +45,14 @@ See `HandilyCommerce.Api.http` — use `@ApiVersion` (must match `Api:Version`).
 
 `GET /{Api:RoutePrefix}/{Api:Version}/apiVersion` — today **`GET /api/v1/apiVersion`**.
 
-- `version` = **product semver** from `Directory.Build.props` (`<Version>`, stamped on the assembly)
+- `version` = **product Versioning** from `Directory.Build.props` (`<Version>`, stamped on the assembly)
 - `apiRouteVersion` = route segment from `Api:Version` (unchanged URL prefix)
 
 ```json
 { "version": "0.1.0", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
 ```
 
-Release process: [docs/SEMVER.md](docs/SEMVER.md).
+Release process: [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## Structure (hexagonal)
 
