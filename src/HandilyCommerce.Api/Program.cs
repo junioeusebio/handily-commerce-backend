@@ -8,6 +8,7 @@ using HandilyCommerce.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,12 +64,19 @@ var apiVersionPath = apiOptions.Path("apiVersion");
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    // TLS terminates at the edge on Render; redirect only locally.
     app.UseHttpsRedirection();
 }
 
 // CORS before Map* so GitHub Pages (and local Angular) can call the API.
 app.UseCors();
+
+// OpenAPI + Scalar UI available in all environments (needed for Render demo).
+app.MapOpenApi();
+app.MapScalarApiReference(options =>
+{
+    options.WithTitle("Handily Commerce API");
+});
 
 app.MapHealthChecks(healthPath, new HealthCheckOptions
 {
