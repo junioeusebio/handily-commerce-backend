@@ -3,12 +3,63 @@ name: CI
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
-  build-test-sonar:
-    name: Build, Test, SonarQube Cloud
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          global-json-file: global.json
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore HandilyCommerce.slnx
+
+      - name: Build
+        run: dotnet build HandilyCommerce.slnx --no-restore -c Release
+
+      - name: Test with coverage (Coverlet line threshold ≥ 80%)
+        run: |
+          dotnet test HandilyCommerce.slnx \
+            --no-build \
+            -c Release \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage \
+            --settings coverlet.runsettings \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=opencover \
+            /p:Threshold=80 \
+            /p:ThresholdType=line \
+            /p:ExcludeByFile="**/Program.cs" \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/**
+          retention-days: 7
+
+  sonar:
+    name: SonarQube Cloud
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
@@ -40,6 +91,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
+      - name: Download coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage
+          path: coverage
+
       - name: Begin SonarScanner
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -57,25 +114,26 @@ jobs:
       - name: Restore
         run: dotnet restore HandilyCommerce.slnx
 
-      - name: Build
+      - name: Build (for Sonar analysis)
         run: dotnet build HandilyCommerce.slnx --no-restore -c Release
-
-      - name: Test with coverage (Coverlet line threshold ≥ 80%)
-        run: |
-          dotnet test HandilyCommerce.slnx \
-            --no-build \
-            -c Release \
-            --collect:"XPlat Code Coverage" \
-            --results-directory ./coverage \
-            --settings coverlet.runsettings \
-            /p:CollectCoverage=true \
-            /p:CoverletOutputFormat=opencover \
-            /p:Threshold=80 \
-            /p:ThresholdType=line \
-            /p:ExcludeByFile="**/Program.cs" \
-            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
       - name: End SonarScanner
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
+
+  deploy:
+    name: Deploy Render
+    needs: sonar
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy Render
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "Missing secret RENDER_DEPLOY_HOOK. Disable auto-deploy on Render and add the hook URL as repo secret."
+            exit 1
+          fi
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK"
