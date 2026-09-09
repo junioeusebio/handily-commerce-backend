@@ -6,24 +6,26 @@ namespace HandilyCommerce.Application.Tests.ApiVersion;
 public class ApiVersionServiceTests
 {
     [Fact]
-    public void GetApiVersion_ReturnsServiceApiVersionWithGivenVersion()
+    public void GetApiVersion_ReturnsServiceApiVersionWithGivenVersions()
     {
         var sut = new ApiVersionService();
 
-        var result = sut.GetApiVersion("v1");
+        var result = sut.GetApiVersion("0.1.0", "v1");
 
-        Assert.Equal("v1", result.Version);
+        Assert.Equal("0.1.0", result.Version);
+        Assert.Equal("v1", result.ApiRouteVersion);
         Assert.Equal(ServiceApiVersion.ServiceName, result.Service);
     }
 
     [Fact]
-    public void GetApiVersion_PropagatesConfiguredVersion()
+    public void GetApiVersion_PropagatesConfiguredVersions()
     {
         var sut = new ApiVersionService();
 
-        var result = sut.GetApiVersion("v3");
+        var result = sut.GetApiVersion("9.8.7", "v3");
 
-        Assert.Equal("v3", result.Version);
+        Assert.Equal("9.8.7", result.Version);
+        Assert.Equal("v3", result.ApiRouteVersion);
     }
 
     [Fact]
@@ -31,6 +33,6 @@ public class ApiVersionServiceTests
     {
         IApiVersionPort port = new ApiVersionService();
 
-        Assert.NotNull(port.GetApiVersion("v1"));
+        Assert.NotNull(port.GetApiVersion("0.1.0", "v1"));
     }
 }

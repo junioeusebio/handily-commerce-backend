@@ -41,6 +41,19 @@ OpenAPI (`MapOpenApi`) is available in Development. Document **Info.Title** / **
 
 See `HandilyCommerce.Api.http` — use `@ApiVersion` (must match `Api:Version`).
 
+### Product version (FE footer)
+
+`GET /{Api:RoutePrefix}/{Api:Version}/apiVersion` — today **`GET /api/v1/apiVersion`**.
+
+- `version` = **product semver** from `Directory.Build.props` (`<Version>`, stamped on the assembly)
+- `apiRouteVersion` = route segment from `Api:Version` (unchanged URL prefix)
+
+```json
+{ "version": "0.1.0", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
+```
+
+Release process: [docs/SEMVER.md](docs/SEMVER.md).
+
 ## Structure (hexagonal)
 
 ```

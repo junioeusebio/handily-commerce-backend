@@ -5,7 +5,8 @@ Guia rapido para agentes (Cursor) neste repositorio.
 ## Projeto
 
 - ASP.NET Core **.NET 10**, layout **hexagonal** (Domain / Application / Infrastructure / Api)
-- Versao publica da API: config **`Api:Version`** (hoje `v1`) + `Api:RoutePrefix`
+- Rota da API: config **`Api:Version`** (hoje `v1`) + `Api:RoutePrefix`
+- Semver de produto: `Directory.Build.props` `<Version>` (exposto em `/api/v1/apiVersion`); ver `docs/SEMVER.md`
 - Detalhes: `ARCHITECTURE.md` e `.cursor/rules/`
 
 ## Stack planejada
