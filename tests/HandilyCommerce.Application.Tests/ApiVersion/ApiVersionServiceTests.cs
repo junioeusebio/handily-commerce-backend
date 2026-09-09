@@ -31,8 +31,9 @@ public class ApiVersionServiceTests
     [Fact]
     public void ApiVersionService_ImplementsIApiVersionPort()
     {
-        IApiVersionPort port = new ApiVersionService();
+        ApiVersionService service = new();
 
-        Assert.NotNull(port.GetApiVersion("0.1.0", "v1"));
+        Assert.IsAssignableFrom<IApiVersionPort>(service);
+        Assert.NotNull(service.GetApiVersion("0.1.0", "v1"));
     }
 }
