@@ -3,6 +3,12 @@ name: CI
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -124,6 +130,7 @@ jobs:
 
   deploy:
     name: Deploy Render
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: sonar
     runs-on: ubuntu-latest
 
