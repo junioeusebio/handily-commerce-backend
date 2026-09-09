@@ -14,3 +14,9 @@ GET {{HandilyCommerce.Api_HostAddress}}/{{ApiRoutePrefix}}/{{ApiVersion}}/ping
 Accept: application/json
 
 ###
+
+### API version (FE footer)
+GET {{HandilyCommerce.Api_HostAddress}}/{{ApiRoutePrefix}}/{{ApiVersion}}/apiVersion
+Accept: application/json
+
+###

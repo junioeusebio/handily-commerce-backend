@@ -26,6 +26,19 @@ Dependency direction: **Api → Application + Infrastructure → Domain** (Infra
 - Application: `PingService` builds an `ok` probe; `apiVersion` is supplied by the Api adapter from `Api:Version`
 - Api: thin `MapGet` at `apiOptions.Path("ping")` (e.g. `/api/v1/ping` today)
 
+## API version (FE footer)
+
+- Domain port: `IApiVersionPort` → `ServiceApiVersion` (`version`, `service`)
+- Application: `ApiVersionService` builds the payload; `version` is supplied by the Api adapter from `Api:Version`
+- Api: thin `MapGet` at `apiOptions.Path("apiVersion")` (e.g. `/api/v1/apiVersion` today)
+- Example JSON: `{ "version": "v1", "service": "handily-commerce-backend" }`
+
+## CORS
+
+- Default policy allows origin `https://junioeusebio.github.io` (GitHub Pages) and localhost:4200 for Angular dev
+- Methods: `GET`, `OPTIONS`
+- `UseCors()` is registered in `Program.cs` **before** `Map*` endpoints
+
 ## API versioning (configuration-driven)
 
 HTTP routes are built from the `Api` section in `appsettings.json`:
