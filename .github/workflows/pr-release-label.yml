@@ -1,0 +1,41 @@
+name: PR Release label
+
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  require-release-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require exactly one Release label
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          set -euo pipefail
+          echo "PR labels: ${LABELS:-<none>}"
+          has_major=0
+          has_mirror=0
+          has_patch=0
+          IFS=',' read -r -a arr <<< "${LABELS:-}"
+          for label in "${arr[@]}"; do
+            case "$label" in
+              "Release Major") has_major=1 ;;
+              "Release Mirror") has_mirror=1 ;;
+              "Release Patch") has_patch=1 ;;
+            esac
+          done
+          count=$((has_major + has_mirror + has_patch))
+          if [ "$count" -eq 0 ]; then
+            echo "::error::Missing required Release label. Add exactly one of: Release Major, Release Mirror, Release Patch."
+            exit 1
+          fi
+          if [ "$count" -gt 1 ]; then
+            echo "::error::Multiple Release labels found. Keep exactly one of: Release Major, Release Mirror, Release Patch."
+            exit 1
+          fi
+          echo "OK: required Release label present."

@@ -11,7 +11,7 @@ public sealed class ApiOptions
     /// <summary>URL segment before the version (default: api).</summary>
     public string RoutePrefix { get; set; } = "api";
 
-    /// <summary>Public API version segment (default: v1). Also used as OpenAPI Info.Version.</summary>
+    /// <summary>HTTP route version segment (default: v1). Also used as OpenAPI Info.Version. Not product Versioning.</summary>
     public string Version { get; set; } = "v1";
 
     /// <summary>OpenAPI / Swagger document title.</summary>

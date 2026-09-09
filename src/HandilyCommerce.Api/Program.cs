@@ -1,4 +1,6 @@
+using System.Reflection;
 using HandilyCommerce.Api.Options;
+using HandilyCommerce.Api.Versioning;
 using HandilyCommerce.Application.DependencyInjection;
 using HandilyCommerce.Domain.ApiVersion;
 using HandilyCommerce.Domain.Ping;
@@ -93,6 +95,9 @@ app.MapGet(pingPath, (IOptions<ApiOptions> options, IPingPort pingPort) =>
     Results.Json(pingPort.GetPing(options.Value.Version)));
 
 app.MapGet(apiVersionPath, (IOptions<ApiOptions> options, IApiVersionPort apiVersionPort) =>
-    Results.Json(apiVersionPort.GetApiVersion(options.Value.Version)));
+{
+    var productVersion = ProductVersionReader.FromAssembly(Assembly.GetExecutingAssembly());
+    return Results.Json(apiVersionPort.GetApiVersion(productVersion, options.Value.Version));
+});
 
 await app.RunAsync();

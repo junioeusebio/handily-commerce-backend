@@ -53,8 +53,9 @@ public class ServiceCollectionExtensionsTests
         var port = provider.GetRequiredService<IApiVersionPort>();
 
         Assert.IsType<ApiVersionService>(port);
-        var apiVersion = port.GetApiVersion("v1");
-        Assert.Equal("v1", apiVersion.Version);
+        var apiVersion = port.GetApiVersion("0.1.0", "v1");
+        Assert.Equal("0.1.0", apiVersion.Version);
+        Assert.Equal("v1", apiVersion.ApiRouteVersion);
         Assert.Equal(ServiceApiVersion.ServiceName, apiVersion.Service);
     }
 
