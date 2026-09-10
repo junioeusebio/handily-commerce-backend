@@ -61,7 +61,7 @@ See `HandilyCommerce.Api.http` — use `@ApiVersion` (must match `Api:Version`).
 - `apiRouteVersion` = route segment from `Api:Version` (unchanged URL prefix)
 
 ```json
-{ "version": "0.3.3", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
+{ "version": "0.3.4", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
 ```
 
 Release process: [docs/VERSIONING.md](docs/VERSIONING.md).
@@ -70,7 +70,7 @@ Release process: [docs/VERSIONING.md](docs/VERSIONING.md).
 
 `GET /{Api:RoutePrefix}/{Api:Version}/changelog` — today **`GET /api/v1/changelog`**.
 
-Source for the FE “What's new” modal. Entries are created after merge of PRs labeled **Release Major** or **Release Mirror** (not Patch). Persistence port is `IChangelogRepository`; the current adapter is temporary JSON (`changelog.json` with stable Guid `id`s). **Next micro-PR (B1 SQL)** adds DB + EF repository and migrates the seed — API/Application contracts unchanged.
+Source for the FE “What's new” modal. Entries are created after merge of PRs labeled **Release Major** or **Release Mirror** (not Patch) via a bot PR (`chore/changelog-pr-<n>`, never a direct push to `main`). Persistence port is `IChangelogRepository`; the current adapter is temporary JSON (`changelog.json` with stable Guid `id`s). **Next micro-PR (B1 SQL)** adds DB + EF repository and migrates the seed — API/Application contracts unchanged.
 
 ```json
 [

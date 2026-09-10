@@ -43,7 +43,7 @@ Dependency direction: **Api → Application + Infrastructure → Domain** (Infra
 - Infrastructure (temporary): `JsonFileChangelogRepository` reads embedded `Changelog/changelog.json` with deterministic `id` Guids — **JSON adapter only until SQL**
 - **Next micro-PR (B1 SQL):** add DB + EF Core repository implementing `IChangelogRepository`; migrate seed from JSON → SQL. No change to API routes or Application ports.
 - Api: thin `MapGet` at `apiOptions.Path("changelog")` (e.g. `/api/v1/changelog` today)
-- CI: on merged PRs labeled `Release Major` or `Release Mirror`, workflow `changelog-on-merge.yml` runs `scripts/append-changelog` (assigns a new Guid `id`) and commits the JSON update; after B1 this becomes an INSERT
+- CI: on merged PRs labeled `Release Major` or `Release Mirror`, workflow `changelog-on-merge.yml` runs `scripts/append-changelog` (assigns a new Guid `id`) and opens a `Release Patch` PR on branch `chore/changelog-pr-<n>` (never pushes to `main` — branch protection); after B1 this becomes an INSERT
 
 ## CORS
 
