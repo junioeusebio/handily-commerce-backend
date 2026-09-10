@@ -4,15 +4,15 @@ namespace HandilyCommerce.Application.Changelog;
 
 public sealed class ChangelogService : IChangelogPort
 {
-    private readonly IChangelogStore _store;
+    private readonly IChangelogRepository _repository;
 
-    public ChangelogService(IChangelogStore store)
+    public ChangelogService(IChangelogRepository repository)
     {
-        _store = store;
+        _repository = repository;
     }
 
     public IReadOnlyList<ChangelogEntry> GetEntries() =>
-        _store.ReadAll()
+        _repository.ListAll()
             .OrderByDescending(e => e.MergedAt ?? DateTimeOffset.MinValue)
             .ThenByDescending(e => e.PrNumber ?? 0)
             .ToList();

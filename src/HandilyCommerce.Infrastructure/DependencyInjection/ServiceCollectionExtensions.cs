@@ -10,7 +10,8 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
         // Future outbound adapters (DB, messaging, etc.) register here.
-        services.AddSingleton<IChangelogStore, JsonFileChangelogStore>();
+        // JSON repo is temporary; next PR swaps to EF Core implementing IChangelogRepository.
+        services.AddSingleton<IChangelogRepository, JsonFileChangelogRepository>();
         services.AddHealthChecks()
             .AddCheck<ApplicationHealthCheck>("application");
 

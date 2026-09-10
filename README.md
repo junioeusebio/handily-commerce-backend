@@ -67,11 +67,12 @@ Release process: [docs/VERSIONING.md](docs/VERSIONING.md).
 
 `GET /{Api:RoutePrefix}/{Api:Version}/changelog` — today **`GET /api/v1/changelog`**.
 
-Source for the FE “What's new” modal. Entries are created after merge of PRs labeled **Release Major** or **Release Mirror** (not Patch). Data is a committed JSON file (`src/HandilyCommerce.Infrastructure/Changelog/changelog.json`); a GitHub Action appends on merge when feasible.
+Source for the FE “What's new” modal. Entries are created after merge of PRs labeled **Release Major** or **Release Mirror** (not Patch). Persistence port is `IChangelogRepository`; the current adapter is temporary JSON (`changelog.json` with stable Guid `id`s). **Next micro-PR (B1 SQL)** adds DB + EF repository and migrates the seed — API/Application contracts unchanged.
 
 ```json
 [
   {
+    "id": "a10c0000-0010-4000-8000-00000000000a",
     "title": "feat(A2): Scalar OpenAPI UI",
     "summary": "Adds Scalar UI over the existing OpenAPI document in all environments, including Production on Render.",
     "productVersion": "0.2.0",
@@ -82,7 +83,7 @@ Source for the FE “What's new” modal. Entries are created after merge of PRs
 ]
 ```
 
-Newest first. CORS already allows `GET` / `OPTIONS` for Pages and local Angular.
+Newest first. CORS already allows `GET` / `OPTIONS` for Pages and local Angular. After SQL, append workflow becomes an INSERT into `ChangelogEntries`.
 
 
 ## Structure (hexagonal)

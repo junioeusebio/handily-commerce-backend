@@ -65,7 +65,7 @@ public class ServiceCollectionExtensionsTests
     public void AddApplication_RegistersChangelogServiceAsIChangelogPort()
     {
         var services = new ServiceCollection();
-        services.AddSingleton<IChangelogStore>(new FakeChangelogStore());
+        services.AddSingleton<IChangelogRepository>(new FakeChangelogRepository());
 
         services.AddApplication();
 
@@ -86,8 +86,8 @@ public class ServiceCollectionExtensionsTests
         Assert.Same(services, returned);
     }
 
-    private sealed class FakeChangelogStore : IChangelogStore
+    private sealed class FakeChangelogRepository : IChangelogRepository
     {
-        public IReadOnlyList<ChangelogEntry> ReadAll() => Array.Empty<ChangelogEntry>();
+        public IReadOnlyList<ChangelogEntry> ListAll() => Array.Empty<ChangelogEntry>();
     }
 }

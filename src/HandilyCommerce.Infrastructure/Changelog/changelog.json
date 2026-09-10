@@ -1,5 +1,6 @@
 [
   {
+    "id": "a10c0000-0010-4000-8000-00000000000a",
     "title": "feat(A2): Scalar OpenAPI UI",
     "summary": "Adds Scalar UI over the existing OpenAPI document in all environments, including Production on Render.",
     "productVersion": "0.2.0",
@@ -8,6 +9,7 @@
     "label": "Release Mirror"
   },
   {
+    "id": "a10c0000-0007-4000-8000-000000000007",
     "title": "chore: Versioning 0.1.0 + Release labels process",
     "summary": "Introduces product Versioning separate from the API route version, with Directory.Build.props baseline 0.1.0 and the Release label process.",
     "productVersion": "0.1.0",

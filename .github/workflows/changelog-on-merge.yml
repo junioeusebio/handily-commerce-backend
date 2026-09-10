@@ -55,6 +55,9 @@ jobs:
           echo "value=$label" >> "$GITHUB_OUTPUT"
 
       - name: Append entry
+        # Temporary: appends to committed changelog.json.
+        # After the next micro-PR (B1 SQL + EF Core IChangelogRepository), this step becomes
+        # an INSERT into ChangelogEntries (same Guid id + fields) instead of editing JSON.
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}

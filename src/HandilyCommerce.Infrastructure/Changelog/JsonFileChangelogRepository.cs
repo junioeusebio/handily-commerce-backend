@@ -5,9 +5,11 @@ using HandilyCommerce.Domain.Changelog;
 namespace HandilyCommerce.Infrastructure.Changelog;
 
 /// <summary>
-/// Reads committed changelog entries from the embedded <c>changelog.json</c> resource.
+/// Temporary JSON-file adapter for <see cref="IChangelogRepository"/>.
+/// Reads committed entries from the embedded <c>changelog.json</c> resource.
+/// Next PR replaces this with an EF Core repository against SQL; Domain/Application contracts stay unchanged.
 /// </summary>
-public sealed class JsonFileChangelogStore : IChangelogStore
+public sealed class JsonFileChangelogRepository : IChangelogRepository
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -17,11 +19,11 @@ public sealed class JsonFileChangelogStore : IChangelogStore
 
     private readonly Lazy<IReadOnlyList<ChangelogEntry>> _entries = new(LoadFromEmbeddedResource);
 
-    public IReadOnlyList<ChangelogEntry> ReadAll() => _entries.Value;
+    public IReadOnlyList<ChangelogEntry> ListAll() => _entries.Value;
 
     private static IReadOnlyList<ChangelogEntry> LoadFromEmbeddedResource()
     {
-        var assembly = typeof(JsonFileChangelogStore).Assembly;
+        var assembly = typeof(JsonFileChangelogRepository).Assembly;
         var resourceName = assembly.GetManifestResourceNames()
             .FirstOrDefault(n => n.EndsWith("Changelog.changelog.json", StringComparison.Ordinal)
                                  || n.EndsWith("changelog.json", StringComparison.Ordinal))
@@ -36,6 +38,7 @@ public sealed class JsonFileChangelogStore : IChangelogStore
 
         return entries
             .Select(dto => new ChangelogEntry(
+                dto.Id,
                 dto.Title ?? string.Empty,
                 dto.Summary ?? string.Empty,
                 dto.ProductVersion,
@@ -47,6 +50,7 @@ public sealed class JsonFileChangelogStore : IChangelogStore
 
     private sealed class ChangelogEntryDto
     {
+        public Guid Id { get; set; }
         public string? Title { get; set; }
         public string? Summary { get; set; }
         public string? ProductVersion { get; set; }

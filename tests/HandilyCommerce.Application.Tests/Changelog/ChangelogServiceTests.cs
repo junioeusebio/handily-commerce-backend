@@ -8,9 +8,13 @@ public class ChangelogServiceTests
     [Fact]
     public void GetEntries_ReturnsNewestFirst()
     {
-        var older = new ChangelogEntry("old", "s1", "0.1.0", DateTimeOffset.Parse("2026-09-09T00:41:37Z"), 7, "Release Mirror");
-        var newer = new ChangelogEntry("new", "s2", "0.2.0", DateTimeOffset.Parse("2026-09-09T14:39:41Z"), 10, "Release Mirror");
-        var sut = new ChangelogService(new FakeStore(newer, older));
+        var older = new ChangelogEntry(
+            Guid.Parse("a10c0000-0007-4000-8000-000000000007"),
+            "old", "s1", "0.1.0", DateTimeOffset.Parse("2026-09-09T00:41:37Z"), 7, "Release Mirror");
+        var newer = new ChangelogEntry(
+            Guid.Parse("a10c0000-0010-4000-8000-00000000000a"),
+            "new", "s2", "0.2.0", DateTimeOffset.Parse("2026-09-09T14:39:41Z"), 10, "Release Mirror");
+        var sut = new ChangelogService(new FakeRepository(newer, older));
 
         var result = sut.GetEntries();
 
@@ -22,9 +26,9 @@ public class ChangelogServiceTests
     [Fact]
     public void GetEntries_WhenMergedAtMissing_UsesPrNumberAsTieBreaker()
     {
-        var low = new ChangelogEntry("low", "s", PrNumber: 3);
-        var high = new ChangelogEntry("high", "s", PrNumber: 9);
-        var sut = new ChangelogService(new FakeStore(low, high));
+        var low = new ChangelogEntry(Guid.NewGuid(), "low", "s", PrNumber: 3);
+        var high = new ChangelogEntry(Guid.NewGuid(), "high", "s", PrNumber: 9);
+        var sut = new ChangelogService(new FakeRepository(low, high));
 
         var result = sut.GetEntries();
 
@@ -33,10 +37,10 @@ public class ChangelogServiceTests
     }
 
     [Fact]
-    public void GetEntries_MapsStoreEntriesThroughPort()
+    public void GetEntries_MapsRepositoryEntriesThroughPort()
     {
-        var entry = new ChangelogEntry("t", "summary", "0.3.0", DateTimeOffset.UtcNow, 11, "Release Mirror");
-        var sut = new ChangelogService(new FakeStore(entry));
+        var entry = new ChangelogEntry(Guid.NewGuid(), "t", "summary", "0.3.0", DateTimeOffset.UtcNow, 11, "Release Mirror");
+        var sut = new ChangelogService(new FakeRepository(entry));
 
         var result = sut.GetEntries();
 
@@ -47,18 +51,18 @@ public class ChangelogServiceTests
     [Fact]
     public void ChangelogService_ImplementsIChangelogPort()
     {
-        ChangelogService service = new(new FakeStore());
+        ChangelogService service = new(new FakeRepository());
 
         Assert.IsAssignableFrom<IChangelogPort>(service);
         Assert.Empty(service.GetEntries());
     }
 
-    private sealed class FakeStore : IChangelogStore
+    private sealed class FakeRepository : IChangelogRepository
     {
         private readonly IReadOnlyList<ChangelogEntry> _entries;
 
-        public FakeStore(params ChangelogEntry[] entries) => _entries = entries;
+        public FakeRepository(params ChangelogEntry[] entries) => _entries = entries;
 
-        public IReadOnlyList<ChangelogEntry> ReadAll() => _entries;
+        public IReadOnlyList<ChangelogEntry> ListAll() => _entries;
     }
 }

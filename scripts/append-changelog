@@ -12,6 +12,9 @@ Usage:
     [--changelog path]
 
 Exits non-zero on invalid input or I/O errors (so CI fails clearly).
+
+Note: appends to committed JSON today. After the SQL/EF micro-PR this becomes an INSERT
+into ChangelogEntries (same fields including Guid id as PK).
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ import argparse
 import json
 import re
 import sys
+import uuid
 from pathlib import Path
 
 
@@ -117,7 +121,9 @@ def main() -> int:
         # Repo root is parent of scripts/ (this file lives in scripts/).
         product_version = read_product_version(Path(__file__).resolve().parents[1]) or None
 
+    # New Guid PK; after SQL PR this maps to ChangelogEntries.Id INSERT.
     entry = {
+        "id": str(uuid.uuid4()),
         "title": title,
         "summary": extract_summary(args.body),
         "productVersion": product_version,

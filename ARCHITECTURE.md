@@ -38,11 +38,12 @@ Dependency direction: **Api → Application + Infrastructure → Domain** (Infra
 
 ## Changelog (What's new)
 
-- Domain: `ChangelogEntry` + driven port `IChangelogPort` + outbound port `IChangelogStore`
-- Application: `ChangelogService` loads via the store and returns entries **newest first**
-- Infrastructure: `JsonFileChangelogStore` reads embedded `Changelog/changelog.json` (committed; not a DB yet)
+- Domain: `ChangelogEntry` (`Id` Guid PK + Title/Summary/…) maps 1:1 to a future `ChangelogEntries` table; driven port `IChangelogPort`; outbound persistence port `IChangelogRepository` (`ListAll`)
+- Application: `ChangelogService` loads via the repository and returns entries **newest first** (API/Application contracts stay stable across storage swaps)
+- Infrastructure (temporary): `JsonFileChangelogRepository` reads embedded `Changelog/changelog.json` with deterministic `id` Guids — **JSON adapter only until SQL**
+- **Next micro-PR (B1 SQL):** add DB + EF Core repository implementing `IChangelogRepository`; migrate seed from JSON → SQL. No change to API routes or Application ports.
 - Api: thin `MapGet` at `apiOptions.Path("changelog")` (e.g. `/api/v1/changelog` today)
-- CI: on merged PRs labeled `Release Major` or `Release Mirror`, workflow `changelog-on-merge.yml` runs `scripts/append-changelog` and commits the JSON update (`contents: write`)
+- CI: on merged PRs labeled `Release Major` or `Release Mirror`, workflow `changelog-on-merge.yml` runs `scripts/append-changelog` (assigns a new Guid `id`) and commits the JSON update; after B1 this becomes an INSERT
 
 ## CORS
 

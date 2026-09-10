@@ -37,7 +37,7 @@ public class ServiceCollectionExtensionsTests
 
 
     [Fact]
-    public void AddInfrastructure_RegistersJsonFileChangelogStoreAsIChangelogStore()
+    public void AddInfrastructure_RegistersJsonFileChangelogRepositoryAsIChangelogRepository()
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -46,10 +46,10 @@ public class ServiceCollectionExtensionsTests
         services.AddInfrastructure();
 
         using var provider = services.BuildServiceProvider();
-        var store = provider.GetRequiredService<IChangelogStore>();
+        var repository = provider.GetRequiredService<IChangelogRepository>();
         var port = provider.GetRequiredService<IChangelogPort>();
 
-        Assert.IsType<JsonFileChangelogStore>(store);
+        Assert.IsType<JsonFileChangelogRepository>(repository);
         Assert.NotEmpty(port.GetEntries());
     }
 
