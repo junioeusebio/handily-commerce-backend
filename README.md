@@ -57,10 +57,11 @@ See `HandilyCommerce.Api.http` — use `@ApiVersion` (must match `Api:Version`).
 `GET /{Api:RoutePrefix}/{Api:Version}/apiVersion` — today **`GET /api/v1/apiVersion`**.
 
 - `version` = **product Versioning** from `Directory.Build.props` (`<Version>`, stamped on the assembly)
+- Docker image builds must `COPY Directory.Build.props` into the build context (see `Dockerfile`); omitting it falls back to MSBuild default `1.0.0`.
 - `apiRouteVersion` = route segment from `Api:Version` (unchanged URL prefix)
 
 ```json
-{ "version": "0.3.1", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
+{ "version": "0.3.3", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
 ```
 
 Release process: [docs/VERSIONING.md](docs/VERSIONING.md).

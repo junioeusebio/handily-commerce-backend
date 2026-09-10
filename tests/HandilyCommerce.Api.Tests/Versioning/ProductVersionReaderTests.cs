@@ -37,7 +37,7 @@ public class ProductVersionReaderTests
         var apiAssembly = typeof(ProductVersionReader).Assembly;
         var version = ProductVersionReader.FromAssembly(apiAssembly);
 
-        Assert.Equal("0.3.1", version);
+        Assert.Equal("0.3.3", version);
     }
 
     [Fact]
