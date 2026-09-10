@@ -35,6 +35,16 @@ Dependency direction: **Api → Application + Infrastructure → Domain** (Infra
 - Api: thin `MapGet` at `apiOptions.Path("apiVersion")` (e.g. `/api/v1/apiVersion` today)
 - Example JSON: `{ "version": "0.1.0", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }`
 
+
+## Changelog (What's new)
+
+- Domain: `ChangelogEntry` (`Id` Guid PK + Title/Summary/…) maps 1:1 to a future `ChangelogEntries` table; driven port `IChangelogPort`; outbound persistence port `IChangelogRepository` (`ListAll`)
+- Application: `ChangelogService` loads via the repository and returns entries **newest first** (API/Application contracts stay stable across storage swaps)
+- Infrastructure (temporary): `JsonFileChangelogRepository` reads embedded `Changelog/changelog.json` with deterministic `id` Guids — **JSON adapter only until SQL**
+- **Next micro-PR (B1 SQL):** add DB + EF Core repository implementing `IChangelogRepository`; migrate seed from JSON → SQL. No change to API routes or Application ports.
+- Api: thin `MapGet` at `apiOptions.Path("changelog")` (e.g. `/api/v1/changelog` today)
+- CI: on merged PRs labeled `Release Major` or `Release Mirror`, workflow `changelog-on-merge.yml` runs `scripts/append-changelog` (assigns a new Guid `id`) and commits the JSON update; after B1 this becomes an INSERT
+
 ## CORS
 
 - Default policy allows origin `https://junioeusebio.github.io` (GitHub Pages) and localhost:4200 for Angular dev

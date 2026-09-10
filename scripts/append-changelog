@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""Append a changelog entry for a merged Release Major / Release Mirror PR.
+
+Usage:
+  scripts/append-changelog \\
+    --title "PR title" \\
+    --body "PR body markdown" \\
+    --pr-number 11 \\
+    --label "Release Mirror" \\
+    --merged-at "2026-09-10T12:00:00Z" \\
+    --product-version "0.3.0" \\
+    [--changelog path]
+
+Exits non-zero on invalid input or I/O errors (so CI fails clearly).
+
+Note: appends to committed JSON today. After the SQL/EF micro-PR this becomes an INSERT
+into ChangelogEntries (same fields including Guid id as PK).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+import uuid
+from pathlib import Path
+
+
+DEFAULT_CHANGELOG = (
+    Path(__file__).resolve().parents[1]
+    / "src"
+    / "HandilyCommerce.Infrastructure"
+    / "Changelog"
+    / "changelog.json"
+)
+
+ALLOWED_LABELS = {"Release Major", "Release Mirror"}
+
+
+def extract_summary(body: str) -> str:
+    text = body or ""
+    # Prefer ## Descrição / ## Description / ## Summary section
+    section = re.search(
+        r"^##\s+(Descri[cç][aã]o|Description|Summary)\s*\n+(.*?)(?=^##\s+|\Z)",
+        text,
+        flags=re.IGNORECASE | re.MULTILINE | re.DOTALL,
+    )
+    if section:
+        chunk = section.group(2).strip()
+    else:
+        chunk = text.strip()
+
+    # First non-empty paragraph; strip checklist noise
+    paragraphs = re.split(r"\n\s*\n", chunk)
+    for para in paragraphs:
+        cleaned = re.sub(r"^\s*[-*]\s*\[[ xX]\]\s*", "", para, flags=re.MULTILINE)
+        cleaned = re.sub(r"`{1,3}", "", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        if cleaned and not cleaned.lower().startswith("signed-off-by"):
+            # Keep short for FE modal
+            if len(cleaned) > 280:
+                cleaned = cleaned[:277].rstrip() + "..."
+            return cleaned
+    return "See pull request description."
+
+
+def read_product_version(repo_root: Path) -> str | None:
+    props = repo_root / "Directory.Build.props"
+    if not props.is_file():
+        return None
+    match = re.search(r"<Version>\s*([^<]+)\s*</Version>", props.read_text(encoding="utf-8"))
+    return match.group(1).strip() if match else None
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Append a Major/Mirror changelog entry.")
+    parser.add_argument("--title", required=True)
+    parser.add_argument("--body", default="")
+    parser.add_argument("--pr-number", type=int, required=True)
+    parser.add_argument("--label", required=True)
+    parser.add_argument("--merged-at", required=True)
+    parser.add_argument("--product-version", default="")
+    parser.add_argument("--changelog", type=Path, default=DEFAULT_CHANGELOG)
+    args = parser.parse_args()
+
+    if args.label not in ALLOWED_LABELS:
+        print(
+            f"::error::Label '{args.label}' is not changelog-eligible. "
+            f"Expected one of: {', '.join(sorted(ALLOWED_LABELS))} (Patch is ignored).",
+            file=sys.stderr,
+        )
+        return 2
+
+    title = (args.title or "").strip()
+    if not title:
+        print("::error::PR title is empty; cannot append changelog entry.", file=sys.stderr)
+        return 2
+
+    changelog_path: Path = args.changelog
+    if not changelog_path.is_file():
+        print(f"::error::Changelog file not found: {changelog_path}", file=sys.stderr)
+        return 1
+
+    try:
+        entries = json.loads(changelog_path.read_text(encoding="utf-8"))
+        if not isinstance(entries, list):
+            raise ValueError("changelog.json root must be a JSON array")
+    except (json.JSONDecodeError, ValueError) as exc:
+        print(f"::error::Invalid changelog JSON: {exc}", file=sys.stderr)
+        return 1
+
+    # Idempotent: skip if this PR already recorded
+    for existing in entries:
+        if isinstance(existing, dict) and existing.get("prNumber") == args.pr_number:
+            print(f"PR #{args.pr_number} already in changelog; nothing to do.")
+            return 0
+
+    product_version = (args.product_version or "").strip()
+    if not product_version:
+        # Repo root is parent of scripts/ (this file lives in scripts/).
+        product_version = read_product_version(Path(__file__).resolve().parents[1]) or None
+
+    # New Guid PK; after SQL PR this maps to ChangelogEntries.Id INSERT.
+    entry = {
+        "id": str(uuid.uuid4()),
+        "title": title,
+        "summary": extract_summary(args.body),
+        "productVersion": product_version,
+        "mergedAt": args.merged_at,
+        "prNumber": args.pr_number,
+        "label": args.label,
+    }
+
+    # Newest first
+    entries.insert(0, entry)
+    changelog_path.write_text(
+        json.dumps(entries, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    print(f"Appended changelog entry for PR #{args.pr_number}: {title}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

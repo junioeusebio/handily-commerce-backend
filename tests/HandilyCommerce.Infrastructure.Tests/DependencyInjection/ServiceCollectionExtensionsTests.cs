@@ -1,6 +1,8 @@
 using HandilyCommerce.Application.DependencyInjection;
+using HandilyCommerce.Domain.Changelog;
 using HandilyCommerce.Domain.Health;
 using HandilyCommerce.Infrastructure.DependencyInjection;
+using HandilyCommerce.Infrastructure.Changelog;
 using HandilyCommerce.Infrastructure.Health;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -31,6 +33,24 @@ public class ServiceCollectionExtensionsTests
 
         Assert.Contains(report.Entries, e => e.Key == "application");
         Assert.Equal(HealthStatus.Healthy, report.Entries["application"].Status);
+    }
+
+
+    [Fact]
+    public void AddInfrastructure_RegistersJsonFileChangelogRepositoryAsIChangelogRepository()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddApplication();
+
+        services.AddInfrastructure();
+
+        using var provider = services.BuildServiceProvider();
+        var repository = provider.GetRequiredService<IChangelogRepository>();
+        var port = provider.GetRequiredService<IChangelogPort>();
+
+        Assert.IsType<JsonFileChangelogRepository>(repository);
+        Assert.NotEmpty(port.GetEntries());
     }
 
     [Fact]

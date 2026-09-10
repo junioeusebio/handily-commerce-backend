@@ -1,8 +1,10 @@
 using HandilyCommerce.Application.ApiVersion;
+using HandilyCommerce.Application.Changelog;
 using HandilyCommerce.Application.DependencyInjection;
 using HandilyCommerce.Application.Health;
 using HandilyCommerce.Application.Ping;
 using HandilyCommerce.Domain.ApiVersion;
+using HandilyCommerce.Domain.Changelog;
 using HandilyCommerce.Domain.Health;
 using HandilyCommerce.Domain.Ping;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,6 +62,21 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
+    public void AddApplication_RegistersChangelogServiceAsIChangelogPort()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IChangelogRepository>(new FakeChangelogRepository());
+
+        services.AddApplication();
+
+        using var provider = services.BuildServiceProvider();
+        var port = provider.GetRequiredService<IChangelogPort>();
+
+        Assert.IsType<ChangelogService>(port);
+        Assert.Empty(port.GetEntries());
+    }
+
+    [Fact]
     public void AddApplication_ReturnsSameServiceCollection()
     {
         var services = new ServiceCollection();
@@ -67,5 +84,10 @@ public class ServiceCollectionExtensionsTests
         var returned = services.AddApplication();
 
         Assert.Same(services, returned);
+    }
+
+    private sealed class FakeChangelogRepository : IChangelogRepository
+    {
+        public IReadOnlyList<ChangelogEntry> ListAll() => Array.Empty<ChangelogEntry>();
     }
 }

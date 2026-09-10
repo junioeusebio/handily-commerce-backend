@@ -58,10 +58,33 @@ See `HandilyCommerce.Api.http` — use `@ApiVersion` (must match `Api:Version`).
 - `apiRouteVersion` = route segment from `Api:Version` (unchanged URL prefix)
 
 ```json
-{ "version": "0.2.0", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
+{ "version": "0.3.0", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
 ```
 
 Release process: [docs/VERSIONING.md](docs/VERSIONING.md).
+
+### Changelog (What's new)
+
+`GET /{Api:RoutePrefix}/{Api:Version}/changelog` — today **`GET /api/v1/changelog`**.
+
+Source for the FE “What's new” modal. Entries are created after merge of PRs labeled **Release Major** or **Release Mirror** (not Patch). Persistence port is `IChangelogRepository`; the current adapter is temporary JSON (`changelog.json` with stable Guid `id`s). **Next micro-PR (B1 SQL)** adds DB + EF repository and migrates the seed — API/Application contracts unchanged.
+
+```json
+[
+  {
+    "id": "a10c0000-0010-4000-8000-00000000000a",
+    "title": "feat(A2): Scalar OpenAPI UI",
+    "summary": "Adds Scalar UI over the existing OpenAPI document in all environments, including Production on Render.",
+    "productVersion": "0.2.0",
+    "mergedAt": "2026-09-09T14:39:41Z",
+    "prNumber": 10,
+    "label": "Release Mirror"
+  }
+]
+```
+
+Newest first. CORS already allows `GET` / `OPTIONS` for Pages and local Angular. After SQL, append workflow becomes an INSERT into `ChangelogEntries`.
+
 
 ## Structure (hexagonal)
 
