@@ -58,10 +58,32 @@ See `HandilyCommerce.Api.http` — use `@ApiVersion` (must match `Api:Version`).
 - `apiRouteVersion` = route segment from `Api:Version` (unchanged URL prefix)
 
 ```json
-{ "version": "0.2.0", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
+{ "version": "0.3.0", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
 ```
 
 Release process: [docs/VERSIONING.md](docs/VERSIONING.md).
+
+### Changelog (What's new)
+
+`GET /{Api:RoutePrefix}/{Api:Version}/changelog` — today **`GET /api/v1/changelog`**.
+
+Source for the FE “What's new” modal. Entries are created after merge of PRs labeled **Release Major** or **Release Mirror** (not Patch). Data is a committed JSON file (`src/HandilyCommerce.Infrastructure/Changelog/changelog.json`); a GitHub Action appends on merge when feasible.
+
+```json
+[
+  {
+    "title": "feat(A2): Scalar OpenAPI UI",
+    "summary": "Adds Scalar UI over the existing OpenAPI document in all environments, including Production on Render.",
+    "productVersion": "0.2.0",
+    "mergedAt": "2026-09-09T14:39:41Z",
+    "prNumber": 10,
+    "label": "Release Mirror"
+  }
+]
+```
+
+Newest first. CORS already allows `GET` / `OPTIONS` for Pages and local Angular.
+
 
 ## Structure (hexagonal)
 

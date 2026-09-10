@@ -35,6 +35,15 @@ Dependency direction: **Api → Application + Infrastructure → Domain** (Infra
 - Api: thin `MapGet` at `apiOptions.Path("apiVersion")` (e.g. `/api/v1/apiVersion` today)
 - Example JSON: `{ "version": "0.1.0", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }`
 
+
+## Changelog (What's new)
+
+- Domain: `ChangelogEntry` + driven port `IChangelogPort` + outbound port `IChangelogStore`
+- Application: `ChangelogService` loads via the store and returns entries **newest first**
+- Infrastructure: `JsonFileChangelogStore` reads embedded `Changelog/changelog.json` (committed; not a DB yet)
+- Api: thin `MapGet` at `apiOptions.Path("changelog")` (e.g. `/api/v1/changelog` today)
+- CI: on merged PRs labeled `Release Major` or `Release Mirror`, workflow `changelog-on-merge.yml` runs `scripts/append-changelog` and commits the JSON update (`contents: write`)
+
 ## CORS
 
 - Default policy allows origin `https://junioeusebio.github.io` (GitHub Pages) and localhost:4200 for Angular dev

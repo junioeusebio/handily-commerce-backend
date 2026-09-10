@@ -28,3 +28,11 @@ Quem abre o PR deve:
 3. Incluir `Signed-off-by: Júnio Eusébio` e pedir review de `junioeusebio`.
 
 Não há bump automático: o workflow só valida se o label está presente.
+
+## Changelog (Major / Mirror)
+
+Merged PRs with `Release Major` or `Release Mirror` should appear in `GET /api/v1/changelog` (FE “What's new”).
+
+- Seed / source of truth: `src/HandilyCommerce.Infrastructure/Changelog/changelog.json`
+- Automation: `.github/workflows/changelog-on-merge.yml` + `scripts/append-changelog` (title = PR title; summary = first paragraph / Descrição)
+- `Release Patch` does **not** create a changelog entry

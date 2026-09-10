@@ -3,6 +3,7 @@ using HandilyCommerce.Api.Options;
 using HandilyCommerce.Api.Versioning;
 using HandilyCommerce.Application.DependencyInjection;
 using HandilyCommerce.Domain.ApiVersion;
+using HandilyCommerce.Domain.Changelog;
 using HandilyCommerce.Domain.Ping;
 using HandilyCommerce.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -61,6 +62,7 @@ var apiOptions = app.Services.GetRequiredService<IOptions<ApiOptions>>().Value;
 var healthPath = apiOptions.Path("health");
 var pingPath = apiOptions.Path("ping");
 var apiVersionPath = apiOptions.Path("apiVersion");
+var changelogPath = apiOptions.Path("changelog");
 
 if (app.Environment.IsDevelopment())
 {
@@ -107,5 +109,8 @@ app.MapGet(apiVersionPath, (IOptions<ApiOptions> options, IApiVersionPort apiVer
     var productVersion = ProductVersionReader.FromAssembly(Assembly.GetExecutingAssembly());
     return Results.Json(apiVersionPort.GetApiVersion(productVersion, options.Value.Version));
 });
+
+app.MapGet(changelogPath, (IChangelogPort changelogPort) =>
+    Results.Json(changelogPort.GetEntries()));
 
 await app.RunAsync();

@@ -1,0 +1,89 @@
+name: Changelog on Major/Mirror merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  append-changelog:
+    name: Append changelog entry
+    if: >
+      github.event.pull_request.merged == true &&
+      (
+        contains(join(github.event.pull_request.labels.*.name, ','), 'Release Major') ||
+        contains(join(github.event.pull_request.labels.*.name, ','), 'Release Mirror')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          # GITHUB_TOKEN with contents: write can push back on public repos
+          # unless branch protection blocks it.
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Resolve release label
+        id: label
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          set -euo pipefail
+          label=""
+          IFS=',' read -ra parts <<< "$LABELS"
+          for name in "${parts[@]}"; do
+            case "$name" in
+              "Release Major"|"Release Mirror")
+                if [ -n "$label" ] && [ "$label" != "$name" ]; then
+                  echo "::error::Multiple Major/Mirror labels on PR; refuse to append."
+                  exit 1
+                fi
+                label="$name"
+                ;;
+            esac
+          done
+          if [ -z "$label" ]; then
+            echo "::error::Expected Release Major or Release Mirror label."
+            exit 1
+          fi
+          echo "value=$label" >> "$GITHUB_OUTPUT"
+
+      - name: Append entry
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MERGED_AT: ${{ github.event.pull_request.merged_at }}
+          LABEL: ${{ steps.label.outputs.value }}
+        run: |
+          set -euo pipefail
+          python3 scripts/append-changelog \
+            --title "$PR_TITLE" \
+            --body "$PR_BODY" \
+            --pr-number "$PR_NUMBER" \
+            --label "$LABEL" \
+            --merged-at "$MERGED_AT"
+
+      - name: Commit and push changelog
+        run: |
+          set -euo pipefail
+          FILE="src/HandilyCommerce.Infrastructure/Changelog/changelog.json"
+          if git diff --quiet -- "$FILE"; then
+            echo "No changelog file changes (already present or skipped)."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$FILE"
+          git commit -m "chore(changelog): append PR #${{ github.event.pull_request.number }}"
+          # Prefer working auto-append; fail clearly if push is blocked by protection rules.
+          if ! git push origin HEAD:main; then
+            echo "::error::Failed to push changelog commit with GITHUB_TOKEN (contents: write). Check branch protection / allow GitHub Actions to write."
+            exit 1
+          fi

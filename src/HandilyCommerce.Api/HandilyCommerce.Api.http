@@ -20,3 +20,9 @@ GET {{HandilyCommerce.Api_HostAddress}}/{{ApiRoutePrefix}}/{{ApiVersion}}/apiVer
 Accept: application/json
 
 ###
+
+### Changelog (What's new)
+GET {{HandilyCommerce.Api_HostAddress}}/{{ApiRoutePrefix}}/{{ApiVersion}}/changelog
+Accept: application/json
+
+###
