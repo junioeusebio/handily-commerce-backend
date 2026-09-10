@@ -18,6 +18,12 @@ public sealed class ApiOptions
     public string Title { get; set; } = "Handily Commerce API";
 
     /// <summary>
+    /// Optional public base URL for OpenAPI <c>servers</c> (e.g. https://handily-commerce-backend.onrender.com).
+    /// When unset, inferred from the current request (with https forced for onrender.com).
+    /// </summary>
+    public string? PublicBaseUrl { get; set; }
+
+    /// <summary>
     /// Builds an absolute route path under <c>/{RoutePrefix}/{Version}/...</c>.
     /// </summary>
     public string Path(params string[] segments)

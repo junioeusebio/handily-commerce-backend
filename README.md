@@ -37,16 +37,16 @@ Stable JSON contract; `apiVersion` comes from the same `Api:Version` config (not
 { "service": "handily-commerce-backend", "apiVersion": "v1", "status": "ok" }
 ```
 
-### OpenAPI / Scalar UI
+### OpenAPI / Swagger UI
 
-Interactive docs (Scalar) and the raw OpenAPI document are available in **all environments**, including Production on Render (demo):
+Interactive docs (Swagger UI) and the raw OpenAPI document are available in **all environments**, including Production on Render (demo):
 
 | Resource | Path |
 | --- | --- |
-| Scalar UI | `/scalar` (or `/scalar/v1`) |
+| Swagger UI | `/swagger` |
 | OpenAPI JSON | `/openapi/v1.json` |
 
-Document **Info.Title** / **Info.Version** come from the same `Api` section (`AddOpenApi` transformer), so the UI stays in sync with config.
+Document **Info.Title** / **Info.Version** come from the same `Api` section (`AddOpenApi` transformer). OpenAPI `servers` use HTTPS for Render (`Api:PublicBaseUrl` or request host + forwarded proto; never `http://…onrender.com`), so **Try it out** works.
 
 See `HandilyCommerce.Api.http` — use `@ApiVersion` (must match `Api:Version`).
 
@@ -58,7 +58,7 @@ See `HandilyCommerce.Api.http` — use `@ApiVersion` (must match `Api:Version`).
 - `apiRouteVersion` = route segment from `Api:Version` (unchanged URL prefix)
 
 ```json
-{ "version": "0.2.0", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
+{ "version": "0.3.0", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
 ```
 
 Release process: [docs/VERSIONING.md](docs/VERSIONING.md).
