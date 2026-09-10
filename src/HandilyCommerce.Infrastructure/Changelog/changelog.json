@@ -1,5 +1,14 @@
 [
   {
+    "id": "a10c0000-0011-4000-8000-00000000000b",
+    "title": "feat: changelog API for Major/Mirror releases",
+    "summary": "Changelog API for the FE \"What's new\" modal: hexagonal ports, GET /api/v1/changelog from embedded JSON seed, and merge workflow to append Major/Mirror entries.",
+    "productVersion": "0.3.0",
+    "mergedAt": "2026-09-10T22:44:17Z",
+    "prNumber": 11,
+    "label": "Release Mirror"
+  },
+  {
     "id": "a10c0000-0010-4000-8000-00000000000a",
     "title": "feat(A2): Scalar OpenAPI UI",
     "summary": "Adds Scalar UI over the existing OpenAPI document in all environments, including Production on Render.",

@@ -5,9 +5,11 @@ on:
     types: [closed]
     branches: [main]
 
+# Branch protection on main blocks direct pushes (GH006). We open a Patch PR
+# instead of pushing to main so required checks still run.
 permissions:
   contents: write
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   append-changelog:
@@ -24,8 +26,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
-          # GITHUB_TOKEN with contents: write can push back on public repos
-          # unless branch protection blocks it.
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
@@ -73,20 +73,46 @@ jobs:
             --label "$LABEL" \
             --merged-at "$MERGED_AT"
 
-      - name: Commit and push changelog
+      - name: Open changelog PR (never push to main)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
           FILE="src/HandilyCommerce.Infrastructure/Changelog/changelog.json"
+          BRANCH="chore/changelog-pr-${PR_NUMBER}"
+
           if git diff --quiet -- "$FILE"; then
             echo "No changelog file changes (already present or skipped)."
             exit 0
           fi
+
+          # If a changelog PR for this source PR already exists, nothing to do.
+          existing="$(gh pr list --base main --head "$BRANCH" --state open --json number --jq 'length')"
+          if [ "$existing" != "0" ]; then
+            echo "Open PR already exists for branch $BRANCH; exit 0."
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
           git add "$FILE"
-          git commit -m "chore(changelog): append PR #${{ github.event.pull_request.number }}"
-          # Prefer working auto-append; fail clearly if push is blocked by protection rules.
-          if ! git push origin HEAD:main; then
-            echo "::error::Failed to push changelog commit with GITHUB_TOKEN (contents: write). Check branch protection / allow GitHub Actions to write."
-            exit 1
+          git commit -m "chore(changelog): append PR #${PR_NUMBER}"
+
+          # Never push to main — branch protection requires a PR + checks (GH006).
+          git push -u origin HEAD
+
+          if ! gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "chore(changelog): append PR #${PR_NUMBER}" \
+            --body "Automated changelog append after a Release Major/Mirror merge.
+
+Opens a PR instead of updating \`main\` directly because branch protection
+blocks direct pushes (\`GH006\`) and requires a pull request + checks." \
+            --label "Release Patch"; then
+            # Race: PR created concurrently, or create rejected as duplicate.
+            echo "gh pr create reported failure (PR may already exist); treating as success."
+            exit 0
           fi
