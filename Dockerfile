@@ -4,6 +4,8 @@ WORKDIR /src
 
 # Copy solution + project files first for better layer caching
 COPY HandilyCommerce.slnx ./
+# Product Versioning (Directory.Build.props) must be present for restore/publish
+COPY Directory.Build.props ./
 COPY src/HandilyCommerce.Domain/HandilyCommerce.Domain.csproj src/HandilyCommerce.Domain/
 COPY src/HandilyCommerce.Application/HandilyCommerce.Application.csproj src/HandilyCommerce.Application/
 COPY src/HandilyCommerce.Infrastructure/HandilyCommerce.Infrastructure.csproj src/HandilyCommerce.Infrastructure/
