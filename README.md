@@ -48,6 +48,8 @@ Interactive docs (Scalar) and the raw OpenAPI document are available in **all en
 
 Document **Info.Title** / **Info.Version** come from the same `Api` section (`AddOpenApi` transformer), so the UI stays in sync with config.
 
+OpenAPI `servers` use HTTPS for Render (`Api:PublicBaseUrl` or request host + forwarded proto; never `http://…onrender.com`), so Scalar **Try request** works without mixed content.
+
 See `HandilyCommerce.Api.http` — use `@ApiVersion` (must match `Api:Version`).
 
 ### Product version (FE footer)
@@ -58,7 +60,7 @@ See `HandilyCommerce.Api.http` — use `@ApiVersion` (must match `Api:Version`).
 - `apiRouteVersion` = route segment from `Api:Version` (unchanged URL prefix)
 
 ```json
-{ "version": "0.3.0", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
+{ "version": "0.3.1", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
 ```
 
 Release process: [docs/VERSIONING.md](docs/VERSIONING.md).

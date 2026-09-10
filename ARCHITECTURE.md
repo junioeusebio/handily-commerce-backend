@@ -47,7 +47,7 @@ Dependency direction: **Api → Application + Infrastructure → Domain** (Infra
 
 ## CORS
 
-- Default policy allows origin `https://junioeusebio.github.io` (GitHub Pages) and localhost:4200 for Angular dev
+- Default policy allows origins `https://junioeusebio.github.io` (GitHub Pages), `https://handily-commerce-backend.onrender.com` (Render demo / Scalar), and localhost:4200 for Angular dev
 - Methods: `GET`, `OPTIONS`
 - `UseCors()` is registered in `Program.cs` **before** `Map*` endpoints
 
@@ -65,4 +65,5 @@ HTTP routes are built from the `Api` section in `appsettings.json`:
 
 - Path pattern: `/{RoutePrefix}/{Version}/...` (e.g. `/api/v1/health`).
 - To introduce a breaking change, set `Api:Version` to `v2` (or keep parallel documents later) — **no hardcoded `/api/v1/` in `Program.cs`**.
-- OpenAPI document `Info.Version` / `Info.Title` use the same keys via `AddOpenApi` + document transformer, so Swagger UI (when added) stays aligned.
+- OpenAPI document `Info.Version` / `Info.Title` use the same keys via `AddOpenApi` + document transformer, so Scalar UI (`/scalar`, document at `/openapi/v1.json`) stays aligned.
+- OpenAPI `servers` are set to the public HTTPS base URL on Render (forwarded headers + force https for `*.onrender.com`; optional `Api:PublicBaseUrl`).
