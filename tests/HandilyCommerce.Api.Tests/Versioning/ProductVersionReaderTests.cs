@@ -37,7 +37,18 @@ public class ProductVersionReaderTests
         var apiAssembly = typeof(ProductVersionReader).Assembly;
         var version = ProductVersionReader.FromAssembly(apiAssembly);
 
-        Assert.Equal("0.4.0", version);
+        // tests/.../bin/{config}/netX.0 → five levels up is the repo root.
+        var propsPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..", "..",
+            "Directory.Build.props"));
+        Assert.True(File.Exists(propsPath), $"Missing Directory.Build.props at {propsPath}");
+        var props = File.ReadAllText(propsPath);
+        var match = System.Text.RegularExpressions.Regex.Match(
+            props,
+            @"<Version>(?<v>[^<]+)</Version>");
+        Assert.True(match.Success, "Directory.Build.props must declare <Version>");
+        Assert.Equal(match.Groups["v"].Value.Trim(), version);
     }
 
     [Fact]
