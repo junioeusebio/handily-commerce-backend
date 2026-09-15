@@ -17,7 +17,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IHealthPort, HealthService>();
         services.AddSingleton<IPingPort, PingService>();
         services.AddSingleton<IApiVersionPort, ApiVersionService>();
-        services.AddSingleton<IChangelogPort, ChangelogService>();
+        services.AddScoped<IChangelogPort, ChangelogService>();
         return services;
     }
 }
