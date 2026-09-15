@@ -62,15 +62,19 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddApplication_RegistersChangelogServiceAsIChangelogPort()
+    public void AddApplication_RegistersChangelogServiceAsScopedIChangelogPort()
     {
         var services = new ServiceCollection();
         services.AddSingleton<IChangelogRepository>(new FakeChangelogRepository());
 
         services.AddApplication();
 
+        var descriptor = Assert.Single(services, d => d.ServiceType == typeof(IChangelogPort));
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+
         using var provider = services.BuildServiceProvider();
-        var port = provider.GetRequiredService<IChangelogPort>();
+        using var scope = provider.CreateScope();
+        var port = scope.ServiceProvider.GetRequiredService<IChangelogPort>();
 
         Assert.IsType<ChangelogService>(port);
         Assert.Empty(port.GetEntries());
