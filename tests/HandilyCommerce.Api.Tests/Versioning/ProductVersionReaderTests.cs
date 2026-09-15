@@ -37,8 +37,11 @@ public class ProductVersionReaderTests
         var apiAssembly = typeof(ProductVersionReader).Assembly;
         var version = ProductVersionReader.FromAssembly(apiAssembly);
 
-        // Keep in sync with Directory.Build.props <Version> (avoid hardcoding per bump).
-        var propsPath = FindDirectoryBuildProps();
+        // tests/.../bin/{config}/netX.0 → five levels up is the repo root.
+        var propsPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..", "..",
+            "Directory.Build.props"));
         Assert.True(File.Exists(propsPath), $"Missing Directory.Build.props at {propsPath}");
         var props = File.ReadAllText(propsPath);
         var match = System.Text.RegularExpressions.Regex.Match(
@@ -46,23 +49,6 @@ public class ProductVersionReaderTests
             @"<Version>(?<v>[^<]+)</Version>");
         Assert.True(match.Success, "Directory.Build.props must declare <Version>");
         Assert.Equal(match.Groups["v"].Value.Trim(), version);
-    }
-
-    private static string FindDirectoryBuildProps()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(dir.FullName, "Directory.Build.props");
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            dir = dir.Parent;
-        }
-
-        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Directory.Build.props"));
     }
 
     [Fact]
