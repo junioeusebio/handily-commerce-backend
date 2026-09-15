@@ -61,7 +61,7 @@ See `HandilyCommerce.Api.http` — use `@ApiVersion` (must match `Api:Version`).
 - `apiRouteVersion` = route segment from `Api:Version` (unchanged URL prefix)
 
 ```json
-{ "version": "0.3.4", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
+{ "version": "0.4.0", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
 ```
 
 Release process: [docs/VERSIONING.md](docs/VERSIONING.md).
@@ -70,7 +70,7 @@ Release process: [docs/VERSIONING.md](docs/VERSIONING.md).
 
 `GET /{Api:RoutePrefix}/{Api:Version}/changelog` — today **`GET /api/v1/changelog`**.
 
-Source for the FE “What's new” modal. Entries are created after merge of PRs labeled **Release Major** or **Release Mirror** (not Patch) via a bot PR (`chore/changelog-pr-<n>`, never a direct push to `main`). Persistence port is `IChangelogRepository`; the current adapter is temporary JSON (`changelog.json` with stable Guid `id`s). **Next micro-PR (B1 SQL)** adds DB + EF repository and migrates the seed — API/Application contracts unchanged.
+Source for the FE “What's new” modal. Entries are created after merge of PRs labeled **Release Major** or **Release Mirror** (not Patch) via a bot PR (`chore/changelog-pr-<n>`, never a direct push to `main`). Persistence port is `IChangelogRepository`; runtime adapter is **EF Core** (`EfChangelogRepository`) against **Supabase Postgres** (`ChangelogEntries`, seed via migration `HasData`). The committed `changelog.json` remains for the merge workflow append until a later PR writes new entries to the DB.
 
 ```json
 [
@@ -86,7 +86,34 @@ Source for the FE “What's new” modal. Entries are created after merge of PRs
 ]
 ```
 
-Newest first. CORS already allows `GET` / `OPTIONS` for Pages and local Angular. After SQL, append workflow becomes an INSERT into `ChangelogEntries`.
+Newest first. CORS already allows `GET` / `OPTIONS` for Pages and local Angular.
+
+### Database (Supabase Postgres)
+
+EF Core + Npgsql. **Never commit the password.** Prefer the **Transaction pooler** (port 6543) for the app / Render:
+
+```bash
+# Preferred (local): user-secrets (not in git) — Transaction pooler
+dotnet user-secrets set "ConnectionStrings:Default"   "Host=aws-0-sa-east-1.pooler.supabase.com;Port=6543;Database=postgres;Username=postgres.dpvkazuksnmcyfkkbkex;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true"   --project src/HandilyCommerce.Api
+
+# Env (Render / shell) — ConnectionStrings__Default
+export ConnectionStrings__Default='Host=aws-0-sa-east-1.pooler.supabase.com;Port=6543;Database=postgres;Username=postgres.dpvkazuksnmcyfkkbkex;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true'
+
+# URI form (pooler)
+# postgresql://postgres.dpvkazuksnmcyfkkbkex:YOUR_PASSWORD@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require
+```
+
+Optional CI: GitHub Actions secret **`CONNECTIONSTRINGS_DEFAULT`** (same pooler string). Tests stay green **without** a live DB (EF InMemory); the secret is only if a future workflow needs it.
+
+**Migrations note:** if the pooler rejects DDL, use the direct host temporarily for `dotnet ef database update` only:
+
+`Host=db.dpvkazuksnmcyfkkbkex.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true`
+
+```bash
+dotnet ef database update --project src/HandilyCommerce.Infrastructure --startup-project src/HandilyCommerce.Api
+```
+
+In Development, the API also runs `Database.MigrateAsync()` on startup when `ConnectionStrings:Default` is non-empty.
 
 
 ## Structure (hexagonal)
@@ -104,15 +131,15 @@ src/
 - Cursor agents/rules: [AGENTS.md](AGENTS.md) and `.cursor/`
 
 
-## Deploy on Render (free, no database)
+## Deploy on Render (free)
 
-This repo includes a Docker image (`Dockerfile`) and a Render Blueprint (`render.yaml`) for a **free** web service — **no Postgres/database** yet.
+This repo includes a Docker image (`Dockerfile`) and a Render Blueprint (`render.yaml`) for a **free** web service. Postgres is hosted on **Supabase** (not Render).
 
 1. Create a [Render](https://render.com) account and connect the GitHub repo `junioeusebio/handily-commerce-backend`.
 2. Use **New → Blueprint** and select this repository (Render reads `render.yaml`), or create a **Web Service** with Docker runtime pointing at `./Dockerfile`.
 3. Choose the **free** plan. Expect **cold starts** after idle (first request can take several seconds).
 4. Health check: `GET /api/v1/health` (also configured as `healthCheckPath` in the Blueprint).
-5. No database resources are provisioned in `render.yaml` for now — add Postgres later when needed.
+5. Set env var **`ConnectionStrings__Default`** on Render to the **Transaction pooler** connection string (password from Supabase dashboard — never commit it). Optional GitHub Actions secret **`CONNECTIONSTRINGS_DEFAULT`** for future workflows — CI tests do **not** require it (EF InMemory). Run migrations once against Supabase (`dotnet ef database update`; use direct host if pooler blocks DDL) before relying on `/changelog`.
 
 Local Docker (optional):
 

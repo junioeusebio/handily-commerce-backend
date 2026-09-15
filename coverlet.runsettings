@@ -6,7 +6,7 @@
         <Configuration>
           <Format>opencover,cobertura</Format>
           <Exclude>[*.Tests]*</Exclude>
-          <ExcludeByFile>**/Program.cs,**/bin/**,**/obj/**</ExcludeByFile>
+          <ExcludeByFile>**/Program.cs,**/bin/**,**/obj/**,**/Persistence/Migrations/**,**/*Designer.cs,**/HandilyCommerceDbContextFactory.cs</ExcludeByFile>
           <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
         </Configuration>
       </DataCollector>

@@ -8,6 +8,7 @@ using HandilyCommerce.Domain.Changelog;
 using HandilyCommerce.Domain.Ping;
 using HandilyCommerce.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
@@ -89,9 +90,21 @@ builder.Services.AddOpenApi(options =>
 });
 
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure();
+builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
+
+// Development: apply EF migrations when a connection string is configured (Supabase via user-secrets / env).
+if (app.Environment.IsDevelopment())
+{
+    var connectionString = app.Configuration.GetConnectionString("Default");
+    if (!string.IsNullOrWhiteSpace(connectionString))
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<HandilyCommerce.Infrastructure.Persistence.HandilyCommerceDbContext>();
+        await db.Database.MigrateAsync();
+    }
+}
 
 var apiOptions = app.Services.GetRequiredService<IOptions<ApiOptions>>().Value;
 var healthPath = apiOptions.Path("health");

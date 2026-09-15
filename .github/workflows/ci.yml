@@ -53,7 +53,6 @@ jobs:
             /p:CoverletOutputFormat=opencover \
             /p:Threshold=80 \
             /p:ThresholdType=line \
-            /p:ExcludeByFile="**/Program.cs" \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
       - name: Upload coverage
@@ -114,7 +113,7 @@ jobs:
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.qualitygate.wait=true \
             /d:sonar.cs.opencover.reportsPaths="${{ github.workspace }}/coverage/**/coverage.opencover.xml" \
-            /d:sonar.coverage.exclusions="**/Program.cs" \
+            /d:sonar.coverage.exclusions="**/Program.cs,**/Persistence/Migrations/**,**/HandilyCommerceDbContextFactory.cs" \
             /d:sonar.exclusions="**/bin/**,**/obj/**,**/coverage/**"
 
       - name: Restore

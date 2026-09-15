@@ -1,17 +1,26 @@
 using HandilyCommerce.Application.DependencyInjection;
 using HandilyCommerce.Domain.Changelog;
 using HandilyCommerce.Domain.Health;
-using HandilyCommerce.Infrastructure.DependencyInjection;
 using HandilyCommerce.Infrastructure.Changelog;
+using HandilyCommerce.Infrastructure.DependencyInjection;
 using HandilyCommerce.Infrastructure.Health;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Logging;
 
 namespace HandilyCommerce.Infrastructure.Tests.DependencyInjection;
 
 public class ServiceCollectionExtensionsTests
 {
+    private static IConfiguration DummyConnectionConfiguration() =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                // Placeholder only — CI never opens a real Supabase connection.
+                ["ConnectionStrings:Default"] = "Host=127.0.0.1;Database=handily_ci;Username=postgres;Password=unused"
+            })
+            .Build();
+
     [Fact]
     public async Task AddInfrastructure_RegistersApplicationHealthCheck()
     {
@@ -19,7 +28,7 @@ public class ServiceCollectionExtensionsTests
         services.AddLogging();
         services.AddApplication();
 
-        services.AddInfrastructure();
+        services.AddInfrastructure(DummyConnectionConfiguration());
 
         using var provider = services.BuildServiceProvider();
         var healthCheck = ActivatorUtilities.CreateInstance<ApplicationHealthCheck>(provider);
@@ -35,22 +44,18 @@ public class ServiceCollectionExtensionsTests
         Assert.Equal(HealthStatus.Healthy, report.Entries["application"].Status);
     }
 
-
     [Fact]
-    public void AddInfrastructure_RegistersJsonFileChangelogRepositoryAsIChangelogRepository()
+    public void AddInfrastructure_RegistersEfChangelogRepositoryAsIChangelogRepository()
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddApplication();
 
-        services.AddInfrastructure();
+        services.AddInfrastructure(DummyConnectionConfiguration());
 
-        using var provider = services.BuildServiceProvider();
-        var repository = provider.GetRequiredService<IChangelogRepository>();
-        var port = provider.GetRequiredService<IChangelogPort>();
-
-        Assert.IsType<JsonFileChangelogRepository>(repository);
-        Assert.NotEmpty(port.GetEntries());
+        var descriptor = Assert.Single(services, d => d.ServiceType == typeof(IChangelogRepository));
+        Assert.Equal(typeof(EfChangelogRepository), descriptor.ImplementationType);
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
     }
 
     [Fact]
@@ -58,7 +63,7 @@ public class ServiceCollectionExtensionsTests
     {
         var services = new ServiceCollection();
 
-        var returned = services.AddInfrastructure();
+        var returned = services.AddInfrastructure(DummyConnectionConfiguration());
 
         Assert.Same(services, returned);
     }

@@ -33,7 +33,7 @@ Não há bump automático: o workflow só valida se o label está presente.
 
 Merged PRs with `Release Major` or `Release Mirror` should appear in `GET /api/v1/changelog` (FE “What's new”).
 
-- Seed (temporary JSON): `src/HandilyCommerce.Infrastructure/Changelog/changelog.json` (each entry has a fixed Guid `id`)
-- Port: `IChangelogRepository` — JSON adapter today; **next micro-PR (B1 SQL)** swaps to EF Core and migrates seed to `ChangelogEntries`
-- Automation: `.github/workflows/changelog-on-merge.yml` + `scripts/append-changelog` (new Guid `id`, title = PR title; summary = first paragraph / Descrição) opens a `Release Patch` PR — never pushes to `main` (branch protection); after SQL this becomes an INSERT
+- DB seed: EF migration `HasData` on `ChangelogEntries` (same Guids as `changelog.json` for #11, #10, #7)
+- Port: `IChangelogRepository` → `EfChangelogRepository` (Supabase Postgres). JSON file still used by the merge workflow until a follow-up writes to the DB.
+- Automation: `.github/workflows/changelog-on-merge.yml` + `scripts/append-changelog` still appends JSON and opens a `Release Patch` PR — never pushes to `main` (branch protection); follow-up: INSERT into `ChangelogEntries`
 - `Release Patch` does **not** create a changelog entry

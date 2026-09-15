@@ -8,7 +8,7 @@ Handily Commerce Backend follows a **hexagonal (ports & adapters)** layout so th
 |---------|------|
 | **Domain** | Core models and ports (e.g. `IHealthPort`, `ServiceHealth`). No ASP.NET or infrastructure types. |
 | **Application** | Use-case implementations of domain ports (e.g. `HealthService`). Exposes `AddApplication()`. |
-| **Infrastructure** | Outbound adapters (health-check bridge today; DB/messaging later). Exposes `AddInfrastructure()`. |
+| **Infrastructure** | Outbound adapters (EF Core / Supabase Postgres, health-check bridge). Exposes `AddInfrastructure(IConfiguration)`. |
 | **Api** | Inbound HTTP adapter and composition root: wires DI and maps endpoints. |
 
 Dependency direction: **Api → Application + Infrastructure → Domain** (Infrastructure also refs Application). Domain never depends on outer layers.
@@ -38,12 +38,12 @@ Dependency direction: **Api → Application + Infrastructure → Domain** (Infra
 
 ## Changelog (What's new)
 
-- Domain: `ChangelogEntry` (`Id` Guid PK + Title/Summary/…) maps 1:1 to a future `ChangelogEntries` table; driven port `IChangelogPort`; outbound persistence port `IChangelogRepository` (`ListAll`)
+- Domain: `ChangelogEntry` (`Id` Guid PK + Title/Summary/…) maps 1:1 to `ChangelogEntries`; driven port `IChangelogPort`; outbound persistence port `IChangelogRepository` (`ListAll`)
 - Application: `ChangelogService` loads via the repository and returns entries **newest first** (API/Application contracts stay stable across storage swaps)
-- Infrastructure (temporary): `JsonFileChangelogRepository` reads embedded `Changelog/changelog.json` with deterministic `id` Guids — **JSON adapter only until SQL**
-- **Next micro-PR (B1 SQL):** add DB + EF Core repository implementing `IChangelogRepository`; migrate seed from JSON → SQL. No change to API routes or Application ports.
-- Api: thin `MapGet` at `apiOptions.Path("changelog")` (e.g. `/api/v1/changelog` today)
-- CI: on merged PRs labeled `Release Major` or `Release Mirror`, workflow `changelog-on-merge.yml` runs `scripts/append-changelog` (assigns a new Guid `id`) and opens a `Release Patch` PR on branch `chore/changelog-pr-<n>` (never pushes to `main` — branch protection); after B1 this becomes an INSERT
+- Infrastructure: `HandilyCommerceDbContext` + `EfChangelogRepository` (Npgsql / **Supabase Postgres**); seed of existing entries (#11, #10, #7) via EF `HasData` in the initial migration. Embedded `changelog.json` + `JsonFileChangelogRepository` remain for the merge workflow / reference only.
+- Connection: `ConnectionStrings:Default` (env `ConnectionStrings__Default` on Render; optional Actions secret `CONNECTIONSTRINGS_DEFAULT`). Prefer Supabase **Transaction pooler** (`aws-0-sa-east-1.pooler.supabase.com:6543`, user `postgres.dpvkazuksnmcyfkkbkex`). Direct `db.…supabase.co:5432` only if migrations need it. **Never commit secrets** — use `dotnet user-secrets` locally.
+- Api: thin `MapGet` at `apiOptions.Path("changelog")` (e.g. `/api/v1/changelog` today); Development applies `MigrateAsync` when a connection string is set
+- CI: on merged PRs labeled `Release Major` or `Release Mirror`, workflow `changelog-on-merge.yml` still appends to `changelog.json` and opens a `Release Patch` PR (keeps CI green without Supabase credentials). A later PR can switch that workflow to INSERT into `ChangelogEntries`.
 
 ## CORS
 
