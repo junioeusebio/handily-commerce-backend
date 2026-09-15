@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -16,6 +16,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.11" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.11" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
@@ -28,13 +30,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\HandilyCommerce.Infrastructure\HandilyCommerce.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\src\HandilyCommerce.Application\HandilyCommerce.Application.csproj" />
+    <ProjectReference Include="../../src/HandilyCommerce.Infrastructure/HandilyCommerce.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/HandilyCommerce.Application/HandilyCommerce.Application.csproj" />
   </ItemGroup>
-
 
   <PropertyGroup>
     <Include>[HandilyCommerce.Infrastructure]*</Include>
-    <ExcludeByFile>**/Program.cs</ExcludeByFile>
+    <Exclude>[HandilyCommerce.Infrastructure]HandilyCommerce.Infrastructure.Persistence.Migrations*</Exclude>
+    <ExcludeByFile>**/Program.cs,**/Persistence/Migrations/**/*.cs,**/HandilyCommerceDbContextFactory.cs</ExcludeByFile>
   </PropertyGroup>
 </Project>

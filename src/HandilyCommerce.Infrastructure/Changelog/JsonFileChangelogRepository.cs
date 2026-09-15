@@ -5,9 +5,9 @@ using HandilyCommerce.Domain.Changelog;
 namespace HandilyCommerce.Infrastructure.Changelog;
 
 /// <summary>
-/// Temporary JSON-file adapter for <see cref="IChangelogRepository"/>.
-/// Reads committed entries from the embedded <c>changelog.json</c> resource.
-/// Next PR replaces this with an EF Core repository against SQL; Domain/Application contracts stay unchanged.
+/// Legacy JSON-file reader for embedded <c>changelog.json</c>.
+/// Runtime DI uses <see cref="EfChangelogRepository"/>; this type remains for tests and as a reference
+/// for the merge workflow that still appends JSON until a follow-up PR writes to the DB.
 /// </summary>
 public sealed class JsonFileChangelogRepository : IChangelogRepository
 {

@@ -1,8 +1,8 @@
 namespace HandilyCommerce.Domain.Changelog;
 
 /// <summary>
-/// Domain model for a product changelog item (What's new). Maps 1:1 to a future
-/// <c>ChangelogEntries</c> table. Free of ASP.NET / infrastructure types.
+/// Domain model for a product changelog item (What's new). Maps 1:1 to the
+/// <c>ChangelogEntries</c> table (EF / Supabase Postgres). Free of ASP.NET / infrastructure types.
 /// Created after merge of PRs labeled Release Major or Release Mirror (not Patch).
 /// </summary>
 public sealed record ChangelogEntry(
