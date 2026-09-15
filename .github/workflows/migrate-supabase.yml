@@ -1,18 +1,17 @@
 name: Migrate Supabase
 
-# Secure path: password stays in Actions secret CONNECTIONSTRINGS_DEFAULT (never in git/logs).
-# workflow_dispatch must live on default branch to appear in Actions UI.
+# Password stays in Actions secret CONNECTIONSTRINGS_DEFAULT (never in git/logs).
 on:
   workflow_dispatch:
     inputs:
       git_ref:
-        description: "Git ref that contains the EF migrations (branch, tag, or SHA)"
+        description: Git ref that contains the EF migrations (branch, tag, or SHA)
         required: true
-        default: "main"
+        default: main
   push:
     branches: [main]
     paths:
-      - "src/HandilyCommerce.Infrastructure/Persistence/Migrations/**"
+      - src/HandilyCommerce.Infrastructure/Persistence/Migrations/**
 
 concurrency:
   group: migrate-supabase
@@ -43,48 +42,4 @@ jobs:
       - name: Apply migrations
         env:
           RAW_CONN: ${{ secrets.CONNECTIONSTRINGS_DEFAULT }}
-        run: |
-          set -euo pipefail
-          if [ -z "${RAW_CONN:-}" ]; then
-            echo "Missing secret CONNECTIONSTRINGS_DEFAULT"
-            exit 1
-          fi
-          export ConnectionStrings__Default="$(python3 - <<'PY'
-import os, re
-raw = os.environ["RAW_CONN"].strip()
-if re.match(r"(?i)^postgres(ql)?://", raw):
-    m = re.match(r"(?i)^postgres(?:ql)?://([^:/]+):([^@]+)@([^:/]+):(\d+)/([^?\s]+)", raw)
-    if not m:
-        raise SystemExit("URI connection string could not be parsed")
-    user, password, host, port, db = m.groups()
-    if password in ("[YOUR-PASSWORD]", "YOUR_PASSWORD", "YOUR-PASSWORD", "SUA_SENHA") or (
-        password.startswith("[") and "PASSWORD" in password.upper()
-    ):
-        raise SystemExit(
-            "Secret still contains a password placeholder — set the real DB password in CONNECTIONSTRINGS_DEFAULT"
-        )
-    print(
-        f"Host={host};Port={port};Database={db};Username={user};Password={password};"
-        "SSL Mode=Require;Trust Server Certificate=true",
-        end="",
-    )
-else:
-    if "[YOUR-PASSWORD]" in raw or "YOUR_PASSWORD" in raw:
-        raise SystemExit(
-            "Secret still contains a password placeholder — set the real DB password in CONNECTIONSTRINGS_DEFAULT"
-        )
-    print(raw, end="")
-PY
-)"
-          echo "Connection string loaded (value not printed)."
-          python3 - <<'PY'
-import os
-c = os.environ["ConnectionStrings__Default"]
-print("Format:", "Host=…" if c.lower().startswith("host=") else "converted/other")
-# Never print connection string
-PY
-          dotnet ef database update \
-            --project src/HandilyCommerce.Infrastructure \
-            --startup-project src/HandilyCommerce.Api \
-            --connection "$ConnectionStrings__Default"
-          echo "Migration finished."
+        run: bash scripts/apply-ef-migrations.sh
