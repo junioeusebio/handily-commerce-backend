@@ -45,6 +45,13 @@ Dependency direction: **Api → Application + Infrastructure → Domain** (Infra
 - Api: thin `MapGet` at `apiOptions.Path("changelog")` (e.g. `/api/v1/changelog` today); Development applies `MigrateAsync` when a connection string is set
 - CI: on merged PRs labeled `Release Major` or `Release Mirror`, workflow `changelog-on-merge.yml` still appends to `changelog.json` and opens a `Release Patch` PR (keeps CI green without Supabase credentials). A later PR can switch that workflow to INSERT into `ChangelogEntries`.
 
+## Products / Items (catalog foundation — B2)
+
+- **Model choice:** `Product` is the catalog aggregate (`Id`, `Name` ≤200, optional `Sku` ≤64, `CreatedAt`). `Item` is the sellable child line/SKU (`Id`, `ProductId` FK, `Name` ≤200, optional `UnitPrice` decimal 18,2). One product has many items; cascade delete on product removal. Empty tables are fine (no seed).
+- Domain: entities + driven port `IProductPort` + outbound `IProductRepository` (`ListAll` with items).
+- Application: `ProductService` sorts by name; Infrastructure: `EfProductRepository` (`Include` items) on Supabase Postgres tables `Products` / `Items` (migration `AddProductsAndItems` after `InitialChangelogEntries`).
+- Api: thin `MapGet` at `apiOptions.Path("products")` (e.g. `/api/v1/products`) — empty list OK for FE A4/later. Full CRUD is a follow-up parte.
+
 ## CORS
 
 - Default policy allows origins `https://junioeusebio.github.io` (GitHub Pages), `https://handily-commerce-backend.onrender.com` (Render demo / Scalar), and localhost:4200 for Angular dev

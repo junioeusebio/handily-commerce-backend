@@ -1,4 +1,5 @@
 using HandilyCommerce.Domain.Changelog;
+using HandilyCommerce.Domain.Products;
 using Microsoft.EntityFrameworkCore;
 
 namespace HandilyCommerce.Infrastructure.Persistence;
@@ -10,6 +11,10 @@ public sealed class HandilyCommerceDbContext(DbContextOptions<HandilyCommerceDbC
     : DbContext(options)
 {
     public DbSet<ChangelogEntry> ChangelogEntries => Set<ChangelogEntry>();
+
+    public DbSet<Product> Products => Set<Product>();
+
+    public DbSet<Item> Items => Set<Item>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -48,6 +53,30 @@ public sealed class HandilyCommerceDbContext(DbContextOptions<HandilyCommerceDbC
                     DateTimeOffset.Parse("2026-09-09T00:41:37Z"),
                     7,
                     "Release Mirror"));
+        });
+
+        modelBuilder.Entity<Product>(entity =>
+        {
+            entity.ToTable("Products");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Sku).HasMaxLength(64);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.HasIndex(e => e.Sku).IsUnique().HasFilter("\"Sku\" IS NOT NULL");
+
+            entity.HasMany(e => e.Items)
+                .WithOne()
+                .HasForeignKey(i => i.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Item>(entity =>
+        {
+            entity.ToTable("Items");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
+            entity.HasIndex(e => e.ProductId);
         });
     }
 }

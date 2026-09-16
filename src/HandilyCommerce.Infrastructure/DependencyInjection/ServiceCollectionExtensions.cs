@@ -1,7 +1,9 @@
 using HandilyCommerce.Domain.Changelog;
+using HandilyCommerce.Domain.Products;
 using HandilyCommerce.Infrastructure.Changelog;
 using HandilyCommerce.Infrastructure.Health;
 using HandilyCommerce.Infrastructure.Persistence;
+using HandilyCommerce.Infrastructure.Products;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +22,7 @@ public static class ServiceCollectionExtensions
             options.UseNpgsql(connectionString));
 
         services.AddScoped<IChangelogRepository, EfChangelogRepository>();
+        services.AddScoped<IProductRepository, EfProductRepository>();
         services.AddHealthChecks()
             .AddCheck<ApplicationHealthCheck>("application");
 

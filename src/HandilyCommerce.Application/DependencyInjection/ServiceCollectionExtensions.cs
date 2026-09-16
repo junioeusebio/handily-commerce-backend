@@ -2,10 +2,12 @@ using HandilyCommerce.Application.ApiVersion;
 using HandilyCommerce.Application.Changelog;
 using HandilyCommerce.Application.Health;
 using HandilyCommerce.Application.Ping;
+using HandilyCommerce.Application.Products;
 using HandilyCommerce.Domain.ApiVersion;
 using HandilyCommerce.Domain.Changelog;
 using HandilyCommerce.Domain.Health;
 using HandilyCommerce.Domain.Ping;
+using HandilyCommerce.Domain.Products;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HandilyCommerce.Application.DependencyInjection;
@@ -18,6 +20,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPingPort, PingService>();
         services.AddSingleton<IApiVersionPort, ApiVersionService>();
         services.AddScoped<IChangelogPort, ChangelogService>();
+        services.AddScoped<IProductPort, ProductService>();
         return services;
     }
 }
