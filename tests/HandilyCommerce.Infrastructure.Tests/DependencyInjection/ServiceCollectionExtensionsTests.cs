@@ -1,9 +1,11 @@
 using HandilyCommerce.Application.DependencyInjection;
 using HandilyCommerce.Domain.Changelog;
+using HandilyCommerce.Domain.Products;
 using HandilyCommerce.Domain.Health;
 using HandilyCommerce.Infrastructure.Changelog;
 using HandilyCommerce.Infrastructure.DependencyInjection;
 using HandilyCommerce.Infrastructure.Health;
+using HandilyCommerce.Infrastructure.Products;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -55,6 +57,21 @@ public class ServiceCollectionExtensionsTests
 
         var descriptor = Assert.Single(services, d => d.ServiceType == typeof(IChangelogRepository));
         Assert.Equal(typeof(EfChangelogRepository), descriptor.ImplementationType);
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+    }
+
+
+    [Fact]
+    public void AddInfrastructure_RegistersEfProductRepositoryAsIProductRepository()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddApplication();
+
+        services.AddInfrastructure(DummyConnectionConfiguration());
+
+        var descriptor = Assert.Single(services, d => d.ServiceType == typeof(IProductRepository));
+        Assert.Equal(typeof(EfProductRepository), descriptor.ImplementationType);
         Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
     }
 

@@ -26,3 +26,10 @@ GET {{HandilyCommerce.Api_HostAddress}}/{{ApiRoutePrefix}}/{{ApiVersion}}/change
 Accept: application/json
 
 ###
+
+### Products (catalog)
+GET {{HandilyCommerce.Api_HostAddress}}/{{ApiRoutePrefix}}/{{ApiVersion}}/products
+Accept: application/json
+
+###
+

@@ -3,10 +3,12 @@ using HandilyCommerce.Application.Changelog;
 using HandilyCommerce.Application.DependencyInjection;
 using HandilyCommerce.Application.Health;
 using HandilyCommerce.Application.Ping;
+using HandilyCommerce.Application.Products;
 using HandilyCommerce.Domain.ApiVersion;
 using HandilyCommerce.Domain.Changelog;
 using HandilyCommerce.Domain.Health;
 using HandilyCommerce.Domain.Ping;
+using HandilyCommerce.Domain.Products;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HandilyCommerce.Application.Tests.DependencyInjection;
@@ -80,6 +82,26 @@ public class ServiceCollectionExtensionsTests
         Assert.Empty(port.GetEntries());
     }
 
+
+    [Fact]
+    public void AddApplication_RegistersProductServiceAsScopedIProductPort()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IProductRepository>(new FakeProductRepository());
+
+        services.AddApplication();
+
+        var descriptor = Assert.Single(services, d => d.ServiceType == typeof(IProductPort));
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var port = scope.ServiceProvider.GetRequiredService<IProductPort>();
+
+        Assert.IsType<ProductService>(port);
+        Assert.Empty(port.GetProducts());
+    }
+
     [Fact]
     public void AddApplication_ReturnsSameServiceCollection()
     {
@@ -93,5 +115,10 @@ public class ServiceCollectionExtensionsTests
     private sealed class FakeChangelogRepository : IChangelogRepository
     {
         public IReadOnlyList<ChangelogEntry> ListAll() => Array.Empty<ChangelogEntry>();
+    }
+
+    private sealed class FakeProductRepository : IProductRepository
+    {
+        public IReadOnlyList<Product> ListAll() => Array.Empty<Product>();
     }
 }

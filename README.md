@@ -61,7 +61,7 @@ See `HandilyCommerce.Api.http` — use `@ApiVersion` (must match `Api:Version`).
 - `apiRouteVersion` = route segment from `Api:Version` (unchanged URL prefix)
 
 ```json
-{ "version": "0.4.0", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
+{ "version": "0.5.0", "service": "handily-commerce-backend", "apiRouteVersion": "v1" }
 ```
 
 Release process: [docs/VERSIONING.md](docs/VERSIONING.md).
@@ -87,6 +87,16 @@ Source for the FE “What's new” modal. Entries are created after merge of PRs
 ```
 
 Newest first. CORS already allows `GET` / `OPTIONS` for Pages and local Angular.
+
+### Products (catalog)
+
+`GET /{Api:RoutePrefix}/{Api:Version}/products` — today **`GET /api/v1/products`**.
+
+Foundation for FE catalog (A4/later). Returns products with nested items (empty array OK until data is seeded). Model: `Product` + child `Item` (FK), EF migration `AddProductsAndItems`. No fake seed required.
+
+```json
+[]
+```
 
 ### Database (Supabase Postgres)
 

@@ -5,6 +5,7 @@ using HandilyCommerce.Api.Versioning;
 using HandilyCommerce.Application.DependencyInjection;
 using HandilyCommerce.Domain.ApiVersion;
 using HandilyCommerce.Domain.Changelog;
+using HandilyCommerce.Domain.Products;
 using HandilyCommerce.Domain.Ping;
 using HandilyCommerce.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -111,6 +112,7 @@ var healthPath = apiOptions.Path("health");
 var pingPath = apiOptions.Path("ping");
 var apiVersionPath = apiOptions.Path("apiVersion");
 var changelogPath = apiOptions.Path("changelog");
+var productsPath = apiOptions.Path("products");
 
 app.UseForwardedHeaders();
 
@@ -162,5 +164,8 @@ app.MapGet(apiVersionPath, (IOptions<ApiOptions> options, IApiVersionPort apiVer
 
 app.MapGet(changelogPath, (IChangelogPort changelogPort) =>
     Results.Json(changelogPort.GetEntries()));
+
+app.MapGet(productsPath, (IProductPort productPort) =>
+    Results.Json(productPort.GetProducts()));
 
 await app.RunAsync();
