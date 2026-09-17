@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
     <!-- Product Versioning (FE footer via GET /api/{route}/apiVersion → version). Route segment stays Api:Version. -->
-    <Version>0.5.3</Version>
+    <Version>0.5.4</Version>
   </PropertyGroup>
 </Project>

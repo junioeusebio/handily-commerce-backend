@@ -106,10 +106,7 @@ jobs:
             --base main \
             --head "$BRANCH" \
             --title "chore(changelog): append PR #${PR_NUMBER}" \
-            --body "Automated changelog append after a Release Major/Mirror merge.
-
-Opens a PR instead of updating \`main\` directly because branch protection
-blocks direct pushes (\`GH006\`) and requires a pull request + checks." \
+            --body "Automated changelog append after a Release Major/Mirror merge. Opens a PR instead of updating main directly (branch protection / GH006)." \
             --label "Release Patch"; then
             # Race: PR created concurrently, or create rejected as duplicate.
             echo "gh pr create reported failure (PR may already exist); treating as success."
