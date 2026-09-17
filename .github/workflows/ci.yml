@@ -113,8 +113,8 @@ jobs:
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.qualitygate.wait=true \
             /d:sonar.cs.opencover.reportsPaths="${{ github.workspace }}/coverage/**/coverage.opencover.xml" \
-            /d:sonar.coverage.exclusions="**/Program.cs,**/Persistence/Migrations/**,**/HandilyCommerceDbContextFactory.cs" \
-            /d:sonar.exclusions="**/bin/**,**/obj/**,**/coverage/**"
+            /d:sonar.coverage.exclusions="**/Program.cs,**/Persistence/Migrations/**,**/HandilyCommerceDbContextFactory.cs,scripts/**" \
+            /d:sonar.exclusions="**/bin/**,**/obj/**,**/coverage/**,scripts/**"
 
       - name: Restore
         run: dotnet restore HandilyCommerce.slnx

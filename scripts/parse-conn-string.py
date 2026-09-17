@@ -23,6 +23,45 @@ def reject_placeholder(text: str) -> None:
         )
 
 
+def _reject_unescaped_at_in_uri(raw: str) -> None:
+    after_scheme = raw.split("://", 1)[1]
+    authority = after_scheme.split("/", 1)[0].split("?", 1)[0]
+    # Unescaped '@' in password → more than one '@' in authority.
+    # Percent-encoded '%40' is fine.
+    if authority.count("@") > 1:
+        raise SystemExit(
+            "URI password appears to contain an unescaped '@'. "
+            "Use Npgsql Host=…;Port=…;Database=…;Username=…;Password=…;SSL Mode=Require;… "
+            "for CONNECTIONSTRINGS_DEFAULT (preferred for GitHub secret and Render), "
+            "or percent-encode the password ('@' → '%40')."
+        )
+
+
+def _uri_to_npgsql(raw: str) -> str:
+    _reject_unescaped_at_in_uri(raw)
+    parsed = urlparse(raw)
+    user = unquote(parsed.username or "")
+    password = unquote(parsed.password or "")
+    host = parsed.hostname
+    port = parsed.port
+    db = unquote((parsed.path or "").lstrip("/").split("/")[0]) if parsed.path else ""
+    if not host or not port or not user or not password or not db:
+        raise SystemExit(
+            "URI connection string could not be parsed. "
+            "Prefer Npgsql Host=… format, or a full postgresql://user:password@host:port/db URI "
+            "with a percent-encoded password if it contains '@'."
+        )
+    reject_placeholder(password)
+    if password.startswith("[") and "PASSWORD" in password.upper():
+        raise SystemExit(
+            "Secret still contains a password placeholder — set the real DB password in CONNECTIONSTRINGS_DEFAULT"
+        )
+    return (
+        f"Host={host};Port={port};Database={db};Username={user};Password={password};"
+        "SSL Mode=Require;Trust Server Certificate=true"
+    )
+
+
 def normalize(raw: str) -> str:
     raw = raw.strip()
     if not raw:
@@ -34,38 +73,7 @@ def normalize(raw: str) -> str:
         return raw
 
     if re.match(r"(?i)^postgres(ql)?://", raw):
-        after_scheme = raw.split("://", 1)[1]
-        authority = after_scheme.split("/", 1)[0].split("?", 1)[0]
-        # Unescaped '@' in password → more than one '@' in authority.
-        # Percent-encoded '%40' is fine.
-        if authority.count("@") > 1:
-            raise SystemExit(
-                "URI password appears to contain an unescaped '@'. "
-                "Use Npgsql Host=…;Port=…;Database=…;Username=…;Password=…;SSL Mode=Require;… "
-                "for CONNECTIONSTRINGS_DEFAULT (preferred for GitHub secret and Render), "
-                "or percent-encode the password ('@' → '%40')."
-            )
-        parsed = urlparse(raw)
-        user = unquote(parsed.username or "")
-        password = unquote(parsed.password or "")
-        host = parsed.hostname
-        port = parsed.port
-        db = unquote((parsed.path or "").lstrip("/").split("/")[0]) if parsed.path else ""
-        if not host or not port or not user or not password or not db:
-            raise SystemExit(
-                "URI connection string could not be parsed. "
-                "Prefer Npgsql Host=… format, or a full postgresql://user:password@host:port/db URI "
-                "with a percent-encoded password if it contains '@'."
-            )
-        reject_placeholder(password)
-        if password.startswith("[") and "PASSWORD" in password.upper():
-            raise SystemExit(
-                "Secret still contains a password placeholder — set the real DB password in CONNECTIONSTRINGS_DEFAULT"
-            )
-        return (
-            f"Host={host};Port={port};Database={db};Username={user};Password={password};"
-            "SSL Mode=Require;Trust Server Certificate=true"
-        )
+        return _uri_to_npgsql(raw)
 
     reject_placeholder(raw)
     return raw
