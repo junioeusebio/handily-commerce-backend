@@ -115,6 +115,8 @@ export ConnectionStrings__Default='Host=aws-0-sa-east-1.pooler.supabase.com;Port
 
 Optional CI: GitHub Actions secret **`CONNECTIONSTRINGS_DEFAULT`** (same pooler string). Tests stay green **without** a live DB (EF InMemory); the secret is only if a future workflow needs it.
 
+**Migrate Supabase / `CONNECTIONSTRINGS_DEFAULT`:** always prefer the Npgsql `Host=aws-0-sa-east-1.pooler.supabase.com;Port=6543;…` form for the GitHub Actions secret and Render (not a `postgresql://` URI). If you must use a URI and the password contains `@`, percent-encode it (`@` → `%40`) — otherwise parsing fails with a clear error. The workflow never prints the connection string. Manual parse checks: `bash scripts/check-conn-string-parse.sh`.
+
 **Migrations note:** if the pooler rejects DDL, use the direct host temporarily for `dotnet ef database update` only:
 
 `Host=db.dpvkazuksnmcyfkkbkex.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true`
