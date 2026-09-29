@@ -32,7 +32,7 @@ public class CourseServiceTests
     {
         CourseService service = new(new FakeRepository());
 
-        Assert.IsAssignableFrom<ICoursePort>(service);
+        Assert.IsType<ICoursePort>(service, exactMatch: false);
     }
 
     private sealed class FakeRepository : ICourseRepository
