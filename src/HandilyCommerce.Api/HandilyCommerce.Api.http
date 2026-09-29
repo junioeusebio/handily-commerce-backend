@@ -33,3 +33,8 @@ Accept: application/json
 
 ###
 
+### Courses (BNCC Computação catalog)
+GET {{HandilyCommerce.Api_HostAddress}}/{{ApiRoutePrefix}}/{{ApiVersion}}/courses
+Accept: application/json
+
+###

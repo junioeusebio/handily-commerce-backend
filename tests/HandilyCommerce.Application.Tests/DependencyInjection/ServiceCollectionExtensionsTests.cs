@@ -1,11 +1,13 @@
 using HandilyCommerce.Application.ApiVersion;
 using HandilyCommerce.Application.Changelog;
+using HandilyCommerce.Application.Courses;
 using HandilyCommerce.Application.DependencyInjection;
 using HandilyCommerce.Application.Health;
 using HandilyCommerce.Application.Ping;
 using HandilyCommerce.Application.Products;
 using HandilyCommerce.Domain.ApiVersion;
 using HandilyCommerce.Domain.Changelog;
+using HandilyCommerce.Domain.Courses;
 using HandilyCommerce.Domain.Health;
 using HandilyCommerce.Domain.Ping;
 using HandilyCommerce.Domain.Products;
@@ -103,6 +105,25 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
+    public void AddApplication_RegistersCourseServiceAsScopedICoursePort()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ICourseRepository>(new FakeCourseRepository());
+
+        services.AddApplication();
+
+        var descriptor = Assert.Single(services, d => d.ServiceType == typeof(ICoursePort));
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var port = scope.ServiceProvider.GetRequiredService<ICoursePort>();
+
+        Assert.IsType<CourseService>(port);
+        Assert.Empty(port.GetCourses());
+    }
+
+    [Fact]
     public void AddApplication_ReturnsSameServiceCollection()
     {
         var services = new ServiceCollection();
@@ -120,5 +141,10 @@ public class ServiceCollectionExtensionsTests
     private sealed class FakeProductRepository : IProductRepository
     {
         public IReadOnlyList<Product> ListAll() => Array.Empty<Product>();
+    }
+
+    private sealed class FakeCourseRepository : ICourseRepository
+    {
+        public IReadOnlyList<Course> ListAll() => Array.Empty<Course>();
     }
 }

@@ -1,8 +1,10 @@
 using HandilyCommerce.Application.DependencyInjection;
 using HandilyCommerce.Domain.Changelog;
+using HandilyCommerce.Domain.Courses;
 using HandilyCommerce.Domain.Products;
 using HandilyCommerce.Domain.Health;
 using HandilyCommerce.Infrastructure.Changelog;
+using HandilyCommerce.Infrastructure.Courses;
 using HandilyCommerce.Infrastructure.DependencyInjection;
 using HandilyCommerce.Infrastructure.Health;
 using HandilyCommerce.Infrastructure.Products;
@@ -73,6 +75,18 @@ public class ServiceCollectionExtensionsTests
         var descriptor = Assert.Single(services, d => d.ServiceType == typeof(IProductRepository));
         Assert.Equal(typeof(EfProductRepository), descriptor.ImplementationType);
         Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+    }
+
+    [Fact]
+    public void AddInfrastructure_RegistersInMemoryCourseRepositoryAsSingletonICourseRepository()
+    {
+        var services = new ServiceCollection();
+
+        services.AddInfrastructure(DummyConnectionConfiguration());
+
+        var descriptor = Assert.Single(services, d => d.ServiceType == typeof(ICourseRepository));
+        Assert.Equal(typeof(InMemoryCourseRepository), descriptor.ImplementationType);
+        Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
     }
 
     [Fact]
