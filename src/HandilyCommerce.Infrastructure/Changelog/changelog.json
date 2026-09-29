@@ -1,5 +1,14 @@
 [
   {
+    "id": "b1502e8f-bc7d-41b3-9108-3a2c47cd1c0a",
+    "title": "feat(K1): endpoint GET courses — catálogo BNCC (0.6.0)",
+    "summary": "K1 — endpoint de cursos BNCC Computação **persistido no Postgres (Supabase) via EF Core**. É a parte do BE para o FE junioeusebio/handily-commerce-frontend#24.",
+    "productVersion": "0.6.0",
+    "mergedAt": "2026-09-29T20:08:11Z",
+    "prNumber": 23,
+    "label": "Release Mirror"
+  },
+  {
     "id": "a10c0000-0011-4000-8000-00000000000b",
     "title": "feat: changelog API for Major/Mirror releases",
     "summary": "Changelog API for the FE \"What's new\" modal: hexagonal ports, GET /api/v1/changelog from embedded JSON seed, and merge workflow to append Major/Mirror entries.",
