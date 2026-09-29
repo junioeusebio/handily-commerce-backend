@@ -1,8 +1,10 @@
 using HandilyCommerce.Application.DependencyInjection;
 using HandilyCommerce.Domain.Changelog;
+using HandilyCommerce.Domain.Courses;
 using HandilyCommerce.Domain.Products;
 using HandilyCommerce.Domain.Health;
 using HandilyCommerce.Infrastructure.Changelog;
+using HandilyCommerce.Infrastructure.Courses;
 using HandilyCommerce.Infrastructure.DependencyInjection;
 using HandilyCommerce.Infrastructure.Health;
 using HandilyCommerce.Infrastructure.Products;
@@ -73,6 +75,40 @@ public class ServiceCollectionExtensionsTests
         var descriptor = Assert.Single(services, d => d.ServiceType == typeof(IProductRepository));
         Assert.Equal(typeof(EfProductRepository), descriptor.ImplementationType);
         Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+    }
+
+    [Fact]
+    public void AddInfrastructure_RegistersEfCourseRepositoryAsScopedICourseRepository()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddApplication();
+
+        services.AddInfrastructure(DummyConnectionConfiguration());
+
+        var descriptor = Assert.Single(services, d => d.ServiceType == typeof(ICourseRepository));
+        Assert.Equal(typeof(EfCourseRepository), descriptor.ImplementationType);
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+    }
+
+    [Fact]
+    public void AddInfrastructure_ResolvesCoursePortInScope_WithScopeValidation()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddApplication();
+        services.AddInfrastructure(DummyConnectionConfiguration());
+
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateScopes = true,
+            ValidateOnBuild = true
+        });
+        using var scope = provider.CreateScope();
+
+        var port = scope.ServiceProvider.GetRequiredService<ICoursePort>();
+
+        Assert.NotNull(port);
     }
 
     [Fact]

@@ -1,6 +1,8 @@
 using HandilyCommerce.Domain.Changelog;
+using HandilyCommerce.Domain.Courses;
 using HandilyCommerce.Domain.Products;
 using HandilyCommerce.Infrastructure.Changelog;
+using HandilyCommerce.Infrastructure.Courses;
 using HandilyCommerce.Infrastructure.Health;
 using HandilyCommerce.Infrastructure.Persistence;
 using HandilyCommerce.Infrastructure.Products;
@@ -23,6 +25,8 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IChangelogRepository, EfChangelogRepository>();
         services.AddScoped<IProductRepository, EfProductRepository>();
+        // Scoped like the DbContext it depends on (never Singleton → captive DbContext).
+        services.AddScoped<ICourseRepository, EfCourseRepository>();
         services.AddHealthChecks()
             .AddCheck<ApplicationHealthCheck>("application");
 

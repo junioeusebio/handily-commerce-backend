@@ -1,10 +1,12 @@
 using HandilyCommerce.Application.ApiVersion;
 using HandilyCommerce.Application.Changelog;
+using HandilyCommerce.Application.Courses;
 using HandilyCommerce.Application.Health;
 using HandilyCommerce.Application.Ping;
 using HandilyCommerce.Application.Products;
 using HandilyCommerce.Domain.ApiVersion;
 using HandilyCommerce.Domain.Changelog;
+using HandilyCommerce.Domain.Courses;
 using HandilyCommerce.Domain.Health;
 using HandilyCommerce.Domain.Ping;
 using HandilyCommerce.Domain.Products;
@@ -21,6 +23,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IApiVersionPort, ApiVersionService>();
         services.AddScoped<IChangelogPort, ChangelogService>();
         services.AddScoped<IProductPort, ProductService>();
+        services.AddScoped<ICoursePort, CourseService>();
         return services;
     }
 }

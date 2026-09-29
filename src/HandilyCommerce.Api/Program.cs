@@ -1,10 +1,12 @@
 using System.Reflection;
+using HandilyCommerce.Api.Courses;
 using HandilyCommerce.Api.OpenApi;
 using HandilyCommerce.Api.Options;
 using HandilyCommerce.Api.Versioning;
 using HandilyCommerce.Application.DependencyInjection;
 using HandilyCommerce.Domain.ApiVersion;
 using HandilyCommerce.Domain.Changelog;
+using HandilyCommerce.Domain.Courses;
 using HandilyCommerce.Domain.Products;
 using HandilyCommerce.Domain.Ping;
 using HandilyCommerce.Infrastructure.DependencyInjection;
@@ -113,6 +115,7 @@ var pingPath = apiOptions.Path("ping");
 var apiVersionPath = apiOptions.Path("apiVersion");
 var changelogPath = apiOptions.Path("changelog");
 var productsPath = apiOptions.Path("products");
+var coursesPath = apiOptions.Path("courses");
 
 app.UseForwardedHeaders();
 
@@ -167,5 +170,8 @@ app.MapGet(changelogPath, (IChangelogPort changelogPort) =>
 
 app.MapGet(productsPath, (IProductPort productPort) =>
     Results.Json(productPort.GetProducts()));
+
+app.MapGet(coursesPath, (ICoursePort coursePort) =>
+    Results.Json(coursePort.GetCourses(), CourseJson.SerializerOptions));
 
 await app.RunAsync();

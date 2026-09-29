@@ -33,3 +33,8 @@ Accept: application/json
 
 ###
 
+### Courses (BNCC Computação catalog — EF table Courses, seeded by migration AddCourses)
+GET {{HandilyCommerce.Api_HostAddress}}/{{ApiRoutePrefix}}/{{ApiVersion}}/courses
+Accept: application/json
+
+###
