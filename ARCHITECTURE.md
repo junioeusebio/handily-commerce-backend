@@ -56,7 +56,10 @@ Dependency direction: **Api → Application + Infrastructure → Domain** (Infra
 
 - Domain: `Course` record (`Id` slug, `Title`, `Axis`, `Summary`, `Audience`, optional `WorkloadHours`) + `BnccAxis` enum (`PensamentoComputacional`, `MundoDigital`, `CulturaDigital`); driven port `ICoursePort` + outbound `ICourseRepository` (`ListAll`).
 - Application: `CourseService` orders by axis (stable within an axis).
-- Infrastructure: `InMemoryCourseRepository` (static example courses until the official list; swap for EF later without API changes).
+- Infrastructure: `EfCourseRepository` (**Scoped**, like `HandilyCommerceDbContext` — never Singleton) on Supabase Postgres table `Courses`, mapped in `CourseModel`: `Id` varchar(100) PK, `Title`, `Axis` (enum name as text), `Summary`, `Audience`, `WorkloadHours` int NULL, `SortOrder` int (EF shadow property = catalog order; not exposed by the API).
+- Migration `AddCourses` creates the table and seeds the 4 initial courses with idempotent SQL (`INSERT … ON CONFLICT ("Id") DO NOTHING`) inside `Up` — **no model `HasData`** (removed on purpose in #21 so future migrations never rewrite/delete rows edited in Supabase). `Down` drops the table.
+- Deploy: run the **Migrate Supabase** workflow (secret `CONNECTIONSTRINGS_DEFAULT`; auto on push to `main` touching `Persistence/Migrations/**`, or manual `workflow_dispatch`) **before** the Render deploy serves `/courses`.
+- RLS: same as `ChangelogEntries` (B1 SQL) — RLS is **not** enabled; the API is the only reader and connects with the owner role from `ConnectionStrings:Default`. If the table is ever exposed via Supabase Data API, enable RLS with explicit policies in a follow-up parte.
 - Api: thin `MapGet` at `apiOptions.Path("courses")` (e.g. `/api/v1/courses`) serialized with `CourseJson.SerializerOptions` — camelCase, `axis` kebab-case (`pensamento-computacional`), `workloadHours` omitted when null.
 
 ## CORS

@@ -25,7 +25,8 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IChangelogRepository, EfChangelogRepository>();
         services.AddScoped<IProductRepository, EfProductRepository>();
-        services.AddSingleton<ICourseRepository, InMemoryCourseRepository>();
+        // Scoped like the DbContext it depends on (never Singleton → captive DbContext).
+        services.AddScoped<ICourseRepository, EfCourseRepository>();
         services.AddHealthChecks()
             .AddCheck<ApplicationHealthCheck>("application");
 

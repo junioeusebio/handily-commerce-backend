@@ -1,5 +1,7 @@
 using HandilyCommerce.Domain.Changelog;
+using HandilyCommerce.Domain.Courses;
 using HandilyCommerce.Domain.Products;
+using HandilyCommerce.Infrastructure.Courses;
 using Microsoft.EntityFrameworkCore;
 
 namespace HandilyCommerce.Infrastructure.Persistence;
@@ -15,6 +17,8 @@ public sealed class HandilyCommerceDbContext(DbContextOptions<HandilyCommerceDbC
     public DbSet<Product> Products => Set<Product>();
 
     public DbSet<Item> Items => Set<Item>();
+
+    public DbSet<Course> Courses => Set<Course>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,5 +55,7 @@ public sealed class HandilyCommerceDbContext(DbContextOptions<HandilyCommerceDbC
             entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
             entity.HasIndex(e => e.ProductId);
         });
+
+        modelBuilder.Entity<Course>(CourseModel.Configure);
     }
 }

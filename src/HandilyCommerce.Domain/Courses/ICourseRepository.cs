@@ -2,7 +2,7 @@ namespace HandilyCommerce.Domain.Courses;
 
 /// <summary>
 /// Outbound port for the course catalog (implemented in Infrastructure).
-/// Adapter today: static in-memory list (<c>InMemoryCourseRepository</c>) until a persisted catalog exists.
+/// Adapter: EF Core (<c>EfCourseRepository</c>) against Supabase Postgres table <c>Courses</c>.
 /// </summary>
 public interface ICourseRepository
 {

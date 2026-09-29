@@ -78,15 +78,37 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddInfrastructure_RegistersInMemoryCourseRepositoryAsSingletonICourseRepository()
+    public void AddInfrastructure_RegistersEfCourseRepositoryAsScopedICourseRepository()
     {
         var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddApplication();
 
         services.AddInfrastructure(DummyConnectionConfiguration());
 
         var descriptor = Assert.Single(services, d => d.ServiceType == typeof(ICourseRepository));
-        Assert.Equal(typeof(InMemoryCourseRepository), descriptor.ImplementationType);
-        Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
+        Assert.Equal(typeof(EfCourseRepository), descriptor.ImplementationType);
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+    }
+
+    [Fact]
+    public void AddInfrastructure_ResolvesCoursePortInScope_WithScopeValidation()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddApplication();
+        services.AddInfrastructure(DummyConnectionConfiguration());
+
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateScopes = true,
+            ValidateOnBuild = true
+        });
+        using var scope = provider.CreateScope();
+
+        var port = scope.ServiceProvider.GetRequiredService<ICoursePort>();
+
+        Assert.NotNull(port);
     }
 
     [Fact]
