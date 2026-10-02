@@ -35,6 +35,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
+      - name: Check conn-string parser (Migrate Supabase)
+        run: bash scripts/check-conn-string-parse.sh
+
       - name: Restore
         run: dotnet restore HandilyCommerce.slnx
 

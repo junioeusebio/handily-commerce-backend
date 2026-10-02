@@ -18,7 +18,8 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Default");
+        // Transaction pooler (6543) needs No Reset On Close=true, or reused pooled connections hang.
+        var connectionString = PostgresConnectionString.ForPooler(configuration.GetConnectionString("Default"));
 
         services.AddDbContext<HandilyCommerceDbContext>(options =>
             options.UseNpgsql(connectionString));
