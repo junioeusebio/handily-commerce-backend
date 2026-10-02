@@ -115,7 +115,7 @@ export ConnectionStrings__Default='Host=aws-0-sa-east-1.pooler.supabase.com;Port
 
 Optional CI: GitHub Actions secret **`CONNECTIONSTRINGS_DEFAULT`** (same pooler string). Tests stay green **without** a live DB (EF InMemory); the secret is only if a future workflow needs it.
 
-**Migrate Supabase / `CONNECTIONSTRINGS_DEFAULT`:** always prefer the Npgsql `Host=aws-0-sa-east-1.pooler.supabase.com;Port=6543;…` form for the GitHub Actions secret and Render (not a `postgresql://` URI). If you must use a URI and the password contains `@`, percent-encode it (`@` → `%40`) — otherwise parsing fails with a clear error. The workflow never prints the connection string. Manual parse checks: `bash scripts/check-conn-string-parse.sh`.
+**Migrate Supabase / `CONNECTIONSTRINGS_DEFAULT`:** the Npgsql `Host=aws-0-sa-east-1.pooler.supabase.com;Port=6543;…` form is preferred for the GitHub Actions secret and Render, but a `postgresql://user:password@host:port/db` URI also works: the parser splits user-info from host at the **last** `@`, so raw `@`, `:`, `/`, `?` in the password are fine (percent-encoding such as `%40` is still decoded; values with `;` or quotes are quoted for Npgsql). The workflow never prints the connection string and registers the password with `::add-mask::` before running `dotnet ef`, so fragments can't leak through Npgsql error messages. It runs on push to `main` when migrations **or** the migrate tooling change, and via `workflow_dispatch`. Manual parse checks: `bash scripts/check-conn-string-parse.sh`.
 
 **Migrations note:** if the pooler rejects DDL, use the direct host temporarily for `dotnet ef database update` only:
 
