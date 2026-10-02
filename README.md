@@ -165,6 +165,11 @@ Logs always go to the console (Render → **Logs** tab) and, when enabled, to **
 
 **Enable on Render:** set `GrafanaLoki__Url`, `GrafanaLoki__Username` and `GrafanaLoki__ApiToken` in the service environment (the sink stays off unless all three are set; startup logs `Grafana Loki log sink enabled|disabled`).
 
+**No logs in Grafana?** Check Render logs right after startup:
+- `Grafana Loki target: host=… user=12***** (N chars) token=set` (safe summary; the token is never printed). Host must be the **Loki** URL (`logs-prod-….grafana.net`, base only — a pasted `/loki/api/v1/push` or trailing `/` is stripped), user the numeric **Loki** user id.
+- `Grafana Loki config: …` warnings flag an OTLP URL, the stack URL, a non-numeric user or a token not starting with `glc_`.
+- `[Serilog SelfLog] … received Unauthorized from Loki` (wrong user/token or token without `logs:write`) or `received NotFound` (wrong URL). Push errors go to stderr via Serilog SelfLog.
+
 ## Deploy on Render (free)
 
 This repo includes a Docker image (`Dockerfile`) and a Render Blueprint (`render.yaml`) for a **free** web service. Postgres is hosted on **Supabase** (not Render).

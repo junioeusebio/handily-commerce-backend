@@ -43,6 +43,24 @@ public class LoggingSetupTests
     }
 
     [Fact]
+    public void EnableSelfLog_WritesSerilogDiagnosticsToWriter()
+    {
+        using var writer = new StringWriter();
+        try
+        {
+            LoggingSetup.EnableSelfLog(writer);
+            Serilog.Debugging.SelfLog.WriteLine("received {0} from Loki", 401);
+
+            Assert.Contains("[Serilog SelfLog]", writer.ToString(), StringComparison.Ordinal);
+            Assert.Contains("received 401 from Loki", writer.ToString(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            Serilog.Debugging.SelfLog.Disable();
+        }
+    }
+
+    [Fact]
     public void RequestLevel_ServerErrorOrException_IsError()
     {
         var context = new DefaultHttpContext();
