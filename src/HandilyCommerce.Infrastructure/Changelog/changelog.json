@@ -1,5 +1,14 @@
 [
   {
+    "id": "e8f56681-3811-416f-9e84-8dac5681ba02",
+    "title": "feat(obs): logs estruturados + Grafana Cloud Loki (0.7.0)",
+    "summary": "Observabilidade: logs estruturados e uma página web para ver os logs (**Grafana Cloud, plano free**).",
+    "productVersion": "0.7.0",
+    "mergedAt": "2026-10-02T15:48:01Z",
+    "prNumber": 25,
+    "label": "Release Mirror"
+  },
+  {
     "id": "a10c0000-0011-4000-8000-00000000000b",
     "title": "feat: changelog API for Major/Mirror releases",
     "summary": "Changelog API for the FE \"What's new\" modal: hexagonal ports, GET /api/v1/changelog from embedded JSON seed, and merge workflow to append Major/Mirror entries.",
