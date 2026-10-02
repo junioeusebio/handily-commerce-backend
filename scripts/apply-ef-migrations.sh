@@ -24,6 +24,8 @@ if [[ "${ConnectionStrings__Default,,}" == host=* ]]; then
 else
   echo "Format: converted/other"
 fi
+# Non-secret target summary (host/port/mode only; never user or password).
+RAW_CONN="$RAW_CONN" python3 "$ROOT/scripts/parse-conn-string.py" --describe
 
 dotnet ef database update \
   --project src/HandilyCommerce.Infrastructure \

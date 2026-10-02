@@ -117,6 +117,8 @@ Optional CI: GitHub Actions secret **`CONNECTIONSTRINGS_DEFAULT`** (same pooler 
 
 **Migrate Supabase / `CONNECTIONSTRINGS_DEFAULT`:** the Npgsql `Host=aws-0-sa-east-1.pooler.supabase.com;Port=6543;…` form is preferred for the GitHub Actions secret and Render, but a `postgresql://user:password@host:port/db` URI also works: the parser splits user-info from host at the **last** `@`, so raw `@`, `:`, `/`, `?` in the password are fine (percent-encoding such as `%40` is still decoded; values with `;` or quotes are quoted for Npgsql). The workflow never prints the connection string and registers the password with `::add-mask::` before running `dotnet ef`, so fragments can't leak through Npgsql error messages. It runs on push to `main` when migrations **or** the migrate tooling change, and via `workflow_dispatch`. Manual parse checks: `bash scripts/check-conn-string-parse.sh`.
 
+**Transaction pooler (6543) + Npgsql pooling:** the app (`PostgresConnectionString.ForPooler`) and the migrate script add `No Reset On Close=true` automatically when the port is 6543. Without it, Npgsql prepends `DISCARD ALL` when reusing a pooled connection, which Supavisor in transaction mode does not answer, so every reused connection hangs until the 30s timeout (`Timeout during reading attempt`). The migrate log prints a non-secret `Target: host=… port=… (mode)` line (no user/password).
+
 **Migrations note:** if the pooler rejects DDL, use the direct host temporarily for `dotnet ef database update` only:
 
 `Host=db.dpvkazuksnmcyfkkbkex.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true`
