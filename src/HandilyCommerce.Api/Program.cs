@@ -133,7 +133,10 @@ var changelogPath = apiOptions.Path("changelog");
 var productsPath = apiOptions.Path("products");
 var coursesPath = apiOptions.Path("courses");
 
-app.Logger.LogInformation("Grafana Loki log sink {LokiSink}", lokiEnabled ? "enabled" : "disabled");
+if (app.Logger.IsEnabled(LogLevel.Information))
+{
+    app.Logger.LogInformation("Grafana Loki log sink {LokiSink}", lokiEnabled ? "enabled" : "disabled");
+}
 
 // Request summary (method, path without query, status, elapsed) — outermost so it sees the final status.
 app.UseSerilogRequestLogging(options =>
