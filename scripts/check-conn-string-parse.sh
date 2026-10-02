@@ -59,6 +59,39 @@ assert_ok "uri-semicolon-password-quoted" \
   'postgresql://user:p;w"d@db.example.com:5432/postgres' \
   'Host=db.example.com;Port=5432;Database=postgres;Username=user;Password="p;w""d";'
 
+assert_ok "pooler-6543-appends-no-reset" \
+  'Host=h.pooler.supabase.com;Port=6543;Database=postgres;Username=u;Password=p;' \
+  'Host=h.pooler.supabase.com;Port=6543;Database=postgres;Username=u;Password=p;No Reset On Close=true'
+
+assert_ok "uri-6543-appends-no-reset" \
+  'postgresql://u:p@h.pooler.supabase.com:6543/postgres' \
+  'Host=h.pooler.supabase.com;Port=6543;Database=postgres;Username=u;Password=p;SSL Mode=Require;Trust Server Certificate=true;No Reset On Close=true'
+
+assert_exact() {
+  local name="$1" raw="$2" expected="$3" flag="${4:-}"
+  local out
+  out="$(RAW_CONN="$raw" python3 "$PY" $flag)"
+  if [[ "$out" == "$expected" ]]; then
+    echo "OK   $name"
+  else
+    echo "FAIL $name: unexpected output" >&2
+    fail=1
+  fi
+}
+
+assert_exact "session-5432-unchanged" \
+  'Host=h.pooler.supabase.com;Port=5432;Database=postgres;Username=u;Password=p' \
+  'Host=h.pooler.supabase.com;Port=5432;Database=postgres;Username=u;Password=p'
+
+assert_exact "6543-already-set-unchanged" \
+  'Host=h;Port=6543;Password=p;No Reset On Close=false' \
+  'Host=h;Port=6543;Password=p;No Reset On Close=false'
+
+assert_exact "describe-no-secrets" \
+  'Host=h.pooler.supabase.com;Port=6543;Database=postgres;Username=secretuser;Password=s3cr3t;SSL Mode=Require' \
+  'Target: host=h.pooler.supabase.com port=6543 (Supavisor transaction pooler); SSL Mode=Require; No Reset On Close=yes' \
+  --describe
+
 assert_fail "uri-missing-port" \
   'postgresql://user:pw@db.example.com/postgres' \
   'could not be parsed'
