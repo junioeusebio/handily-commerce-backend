@@ -149,7 +149,7 @@ src/
 
 Logs always go to the console (Render → **Logs** tab) and, when enabled, to **Grafana Cloud Loki** for search in a web UI.
 
-**Open:** [grafana.com](https://grafana.com) → sign in → your stack (`https://<stack>.grafana.net`) → **Explore** → data source **Loki** (`grafanacloud-<stack>-logs`). Pick a time range at the top right.
+**Open:** [Grafana Explore](https://fondbanana2441.grafana.net/explore) (stack [fondbanana2441.grafana.net](https://fondbanana2441.grafana.net/); or grafana.com → sign in → stack → **Explore**) → data source **Loki** (`grafanacloud-fondbanana2441-logs`). Pick a time range at the top right.
 
 **Basic LogQL queries:**
 
