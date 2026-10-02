@@ -62,6 +62,14 @@ Dependency direction: **Api → Application + Infrastructure → Domain** (Infra
 - RLS: same as `ChangelogEntries` (B1 SQL) — RLS is **not** enabled; the API is the only reader and connects with the owner role from `ConnectionStrings:Default`. If the table is ever exposed via Supabase Data API, enable RLS with explicit policies in a follow-up parte.
 - Api: thin `MapGet` at `apiOptions.Path("courses")` (e.g. `/api/v1/courses`) serialized with `CourseJson.SerializerOptions` — camelCase, `axis` kebab-case (`pensamento-computacional`), `workloadHours` omitted when null.
 
+## Observability (logs)
+
+- **Serilog** (`Serilog.AspNetCore`) replaces default logging: structured console output always (Render log tab), enriched with `Application`, `Environment`, `Version`, and the W3C `TraceId`. `Microsoft.AspNetCore` / `Microsoft.EntityFrameworkCore` / `HttpClient` are raised to `Warning` to keep noise down.
+- **Request log** (`UseSerilogRequestLogging`): `HTTP {Method} {Path} responded {Status} in {Elapsed}` — path only (no query string). 5xx/exceptions log at `Error`; the Render health probe (`/api/{v}/health`) at `Debug` (filtered).
+- **Global exception handler** (`Observability/GlobalExceptionHandler`, `IExceptionHandler` + `AddProblemDetails`): logs `Unhandled exception on {Method} {Path} (traceId {TraceId})` with the exception, and answers `application/problem+json` 500 with `traceId` and no exception details. CORS headers are preserved on errors so the FE can read the status.
+- **Hosted log UI — Grafana Cloud (free tier, Loki)** via `Serilog.Sinks.Grafana.Loki`, enabled only when `GrafanaLoki__Url`, `GrafanaLoki__Username` and `GrafanaLoki__ApiToken` are all set (HTTPS URL required). Local runs and CI log to console only. Labels: `app=handily-commerce-backend`, `env=<environment>`, `level`. Startup logs `Grafana Loki log sink enabled|disabled`. Setup steps in README → *Logs*.
+- Secrets: configuration / connection strings are never logged; EF sensitive data logging stays off.
+
 ## CORS
 
 - Default policy allows origins `https://junioeusebio.github.io` (GitHub Pages), `https://handily-commerce-backend.onrender.com` (Render demo / Scalar), and localhost:4200 for Angular dev

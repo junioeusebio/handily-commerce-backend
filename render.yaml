@@ -9,3 +9,10 @@ services:
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
+      # Optional Grafana Cloud Loki log sink (README → Logs). Set values in the Render dashboard.
+      - key: GrafanaLoki__Url
+        sync: false
+      - key: GrafanaLoki__Username
+        sync: false
+      - key: GrafanaLoki__ApiToken
+        sync: false

@@ -1,5 +1,6 @@
 using System.Reflection;
 using HandilyCommerce.Api.Courses;
+using HandilyCommerce.Api.Observability;
 using HandilyCommerce.Api.OpenApi;
 using HandilyCommerce.Api.Options;
 using HandilyCommerce.Api.Versioning;
@@ -16,8 +17,23 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Structured logs: console always; Grafana Cloud Loki only when GrafanaLoki__* env vars are set.
+var lokiEnabled = false;
+builder.Host.UseSerilog((context, _, logger) =>
+    lokiEnabled = LoggingSetup.Configure(
+        logger,
+        context.Configuration,
+        context.HostingEnvironment.EnvironmentName,
+        ProductVersionReader.FromAssembly(Assembly.GetExecutingAssembly())));
+
+builder.Services.AddProblemDetails(options =>
+    options.CustomizeProblemDetails = context =>
+        context.ProblemDetails.Extensions["traceId"] = GlobalExceptionHandler.GetTraceId(context.HttpContext));
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 // Render (and similar hosts) inject PORT; bind explicitly when present.
 // ListenAnyIP avoids a literal http:// URL (Sonar S5332); TLS ends at the edge.
@@ -116,6 +132,13 @@ var apiVersionPath = apiOptions.Path("apiVersion");
 var changelogPath = apiOptions.Path("changelog");
 var productsPath = apiOptions.Path("products");
 var coursesPath = apiOptions.Path("courses");
+
+app.Logger.LogInformation("Grafana Loki log sink {LokiSink}", lokiEnabled ? "enabled" : "disabled");
+
+// Request summary (method, path without query, status, elapsed) — outermost so it sees the final status.
+app.UseSerilogRequestLogging(options =>
+    options.GetLevel = (context, _, exception) => LoggingSetup.RequestLevel(context, exception, healthPath));
+app.UseExceptionHandler();
 
 app.UseForwardedHeaders();
 

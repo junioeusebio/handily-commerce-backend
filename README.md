@@ -143,6 +143,28 @@ src/
 - Cursor agents/rules: [AGENTS.md](AGENTS.md) and `.cursor/`
 
 
+## Logs (Grafana Cloud — free)
+
+Logs always go to the console (Render → **Logs** tab). To browse/search them in a web UI, ship them to **Grafana Cloud Loki** (free tier: 50 GB logs/month, 14-day retention, no credit card). The sink is **off** unless all three env vars below exist.
+
+1. Create a free account at [grafana.com](https://grafana.com/auth/sign-up/create-user) (a stack such as `junioeusebio.grafana.net` is created; pick a region close to Render, e.g. US East or São Paulo if offered).
+2. In the Grafana Cloud portal (**My Account → your stack → Loki → Details**), copy:
+   - **URL**, e.g. `https://logs-prod-024.grafana.net` (base URL only; the sink appends `/loki/api/v1/push`)
+   - **User**, a number such as `1234567`
+3. On the same page, **Generate now** an access policy token with scope **`logs:write`** (it starts with `glc_`). Save it, since it is shown only once.
+4. On Render, open the service and go to **Environment**. Add:
+
+   | Key | Value |
+   | --- | --- |
+   | `GrafanaLoki__Url` | Loki URL from step 2 |
+   | `GrafanaLoki__Username` | Loki user (number) |
+   | `GrafanaLoki__ApiToken` | `glc_…` token from step 3 |
+
+   Save, and Render redeploys. The startup log shows `Grafana Loki log sink enabled`.
+5. View logs: Grafana (`https://<stack>.grafana.net`) → **Explore** (or **Drilldown → Logs**), data source `grafanacloud-<stack>-logs`, query `{app="handily-commerce-backend"}`. Errors only: `{app="handily-commerce-backend", level="error"}`. Find a request by the `traceId` from a 500 response body: `{app="handily-commerce-backend"} |= "<traceId>"`.
+
+Unhandled errors return `application/problem+json` with a `traceId` (no exception details) and are logged with method, path and trace id.
+
 ## Deploy on Render (free)
 
 This repo includes a Docker image (`Dockerfile`) and a Render Blueprint (`render.yaml`) for a **free** web service. Postgres is hosted on **Supabase** (not Render).
