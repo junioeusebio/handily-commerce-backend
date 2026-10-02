@@ -22,6 +22,8 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 // Structured logs: console always; Grafana Cloud Loki only when GrafanaLoki__* env vars are set.
+// SelfLog → stderr so sink delivery errors (401/404 from Loki) appear in Render logs instead of failing silently.
+LoggingSetup.EnableSelfLog(Console.Error);
 var lokiEnabled = false;
 builder.Host.UseSerilog((context, _, logger) =>
     lokiEnabled = LoggingSetup.Configure(
@@ -138,6 +140,17 @@ if (app.Logger.IsEnabled(LogLevel.Information))
     app.Logger.LogInformation("Grafana Loki log sink {LokiSink}", lokiEnabled ? "enabled" : "disabled");
 }
 
+if (lokiEnabled)
+{
+    var lokiOptions = GrafanaLokiOptions.FromConfiguration(app.Configuration);
+    var lokiSummary = lokiOptions.SafeSummary();
+    app.Logger.LogInformation("Grafana Loki target: {LokiTarget}", lokiSummary);
+    foreach (var warning in lokiOptions.ConfigurationWarnings())
+    {
+        app.Logger.LogWarning("Grafana Loki config: {LokiWarning}", warning);
+    }
+}
+
 // Request summary (method, path without query, status, elapsed) — outermost so it sees the final status.
 app.UseSerilogRequestLogging(options =>
     options.GetLevel = (context, _, exception) => LoggingSetup.RequestLevel(context, exception, healthPath));
@@ -200,4 +213,12 @@ app.MapGet(productsPath, (IProductPort productPort) =>
 app.MapGet(coursesPath, (ICoursePort coursePort) =>
     Results.Json(coursePort.GetCourses(), CourseJson.SerializerOptions));
 
-await app.RunAsync();
+try
+{
+    await app.RunAsync();
+}
+finally
+{
+    // Flush buffered Loki batches on shutdown (Render restarts / spin-down).
+    await Log.CloseAndFlushAsync();
+}

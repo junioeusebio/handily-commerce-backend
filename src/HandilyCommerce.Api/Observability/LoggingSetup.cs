@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Serilog;
+using Serilog.Debugging;
 using Serilog.Events;
 using Serilog.Sinks.Grafana.Loki;
 
@@ -42,15 +43,26 @@ public static class LoggingSetup
         }
 
         logger.WriteTo.GrafanaLoki(
-            loki.Url!,
+            loki.BaseUrl!,
             labels:
             [
                 new LokiLabel { Key = "app", Value = ApplicationName },
                 new LokiLabel { Key = "env", Value = environmentName.ToLowerInvariant() }
             ],
-            credentials: new LokiCredentials { Login = loki.Username!, Password = loki.ApiToken! },
+            credentials: new LokiCredentials { Login = loki.Login!, Password = loki.Password! },
             traceIdMode: LokiFieldDestination.Body);
         return true;
+    }
+
+    /// <summary>
+    /// Routes Serilog's internal diagnostics (e.g. Loki push failures: <c>received 401 from Loki</c>) to
+    /// <paramref name="writer"/> (stderr in Program, so they show up in Render logs). Sinks never throw into the app,
+    /// so without this a misconfigured sink fails silently.
+    /// </summary>
+    public static void EnableSelfLog(TextWriter writer)
+    {
+        var synchronized = TextWriter.Synchronized(writer);
+        SelfLog.Enable(message => synchronized.WriteLine($"[Serilog SelfLog] {message}"));
     }
 
     /// <summary>
