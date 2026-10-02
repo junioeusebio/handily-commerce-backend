@@ -12,6 +12,10 @@ on:
     branches: [main]
     paths:
       - src/HandilyCommerce.Infrastructure/Persistence/Migrations/**
+      # Re-apply pending migrations when the migrate tooling itself changes.
+      - scripts/apply-ef-migrations.sh
+      - scripts/parse-conn-string.py
+      - .github/workflows/migrate-supabase.yml
 
 concurrency:
   group: migrate-supabase

@@ -12,6 +12,9 @@ if [[ -z "${RAW_CONN:-}" ]]; then
   exit 1
 fi
 
+# Mask the password (and any fragment Npgsql may echo in errors) before anything else runs.
+RAW_CONN="$RAW_CONN" python3 "$ROOT/scripts/parse-conn-string.py" --emit-mask
+
 export ConnectionStrings__Default
 ConnectionStrings__Default="$(RAW_CONN="$RAW_CONN" python3 "$ROOT/scripts/parse-conn-string.py")"
 
