@@ -96,6 +96,41 @@ namespace HandilyCommerce.Infrastructure.Persistence.Migrations
                     b.ToTable("Courses", (string)null);
                 });
 
+            modelBuilder.Entity("HandilyCommerce.Domain.Leads.Lead", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<string>("Message")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Municipality")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.ToTable("Leads", (string)null);
+                });
+
             modelBuilder.Entity("HandilyCommerce.Domain.Products.Item", b =>
                 {
                     b.Property<Guid>("Id")

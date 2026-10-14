@@ -8,6 +8,7 @@ using HandilyCommerce.Application.DependencyInjection;
 using HandilyCommerce.Domain.ApiVersion;
 using HandilyCommerce.Domain.Changelog;
 using HandilyCommerce.Domain.Courses;
+using HandilyCommerce.Domain.Leads;
 using HandilyCommerce.Domain.Products;
 using HandilyCommerce.Domain.Ping;
 using HandilyCommerce.Infrastructure.DependencyInjection;
@@ -66,7 +67,7 @@ builder.Services.AddCors(options =>
                 "https://handily-commerce-backend.onrender.com",
                 "http://localhost:4200",
                 "https://localhost:4200")
-            .WithMethods("GET", "OPTIONS")
+            .WithMethods("GET", "POST", "OPTIONS")
             .AllowAnyHeader();
     });
 });
@@ -134,6 +135,7 @@ var apiVersionPath = apiOptions.Path("apiVersion");
 var changelogPath = apiOptions.Path("changelog");
 var productsPath = apiOptions.Path("products");
 var coursesPath = apiOptions.Path("courses");
+var leadsPath = apiOptions.Path("leads");
 
 if (app.Logger.IsEnabled(LogLevel.Information))
 {
@@ -212,6 +214,20 @@ app.MapGet(productsPath, (IProductPort productPort) =>
 
 app.MapGet(coursesPath, (ICoursePort coursePort) =>
     Results.Json(coursePort.GetCourses(), CourseJson.SerializerOptions));
+
+// "Fale conosco" leads → Postgres (Leads). 400 ValidationProblem on invalid input, 201 with id on success.
+app.MapPost(leadsPath, (CreateLeadCommand command, ILeadPort leadPort) =>
+    {
+        var result = leadPort.Create(command);
+        return result.IsSuccess
+            ? Results.Created((string?)null, new { id = result.Lead!.Id })
+            : Results.ValidationProblem(result.Errors.ToDictionary());
+    })
+    .WithName("CreateLead")
+    .WithSummary("Registra um contato (lead) do Fale conosco")
+    .Accepts<CreateLeadCommand>("application/json")
+    .Produces(StatusCodes.Status201Created)
+    .ProducesValidationProblem();
 
 try
 {
