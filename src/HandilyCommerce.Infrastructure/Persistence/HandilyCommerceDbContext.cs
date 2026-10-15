@@ -1,7 +1,9 @@
 using HandilyCommerce.Domain.Changelog;
 using HandilyCommerce.Domain.Courses;
+using HandilyCommerce.Domain.Leads;
 using HandilyCommerce.Domain.Products;
 using HandilyCommerce.Infrastructure.Courses;
+using HandilyCommerce.Infrastructure.Leads;
 using Microsoft.EntityFrameworkCore;
 
 namespace HandilyCommerce.Infrastructure.Persistence;
@@ -19,6 +21,8 @@ public sealed class HandilyCommerceDbContext(DbContextOptions<HandilyCommerceDbC
     public DbSet<Item> Items => Set<Item>();
 
     public DbSet<Course> Courses => Set<Course>();
+
+    public DbSet<Lead> Leads => Set<Lead>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -57,5 +61,7 @@ public sealed class HandilyCommerceDbContext(DbContextOptions<HandilyCommerceDbC
         });
 
         modelBuilder.Entity<Course>(CourseModel.Configure);
+
+        modelBuilder.Entity<Lead>(LeadModel.Configure);
     }
 }

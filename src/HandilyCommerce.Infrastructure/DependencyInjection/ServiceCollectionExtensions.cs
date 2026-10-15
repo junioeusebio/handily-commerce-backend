@@ -1,9 +1,11 @@
 using HandilyCommerce.Domain.Changelog;
 using HandilyCommerce.Domain.Courses;
+using HandilyCommerce.Domain.Leads;
 using HandilyCommerce.Domain.Products;
 using HandilyCommerce.Infrastructure.Changelog;
 using HandilyCommerce.Infrastructure.Courses;
 using HandilyCommerce.Infrastructure.Health;
+using HandilyCommerce.Infrastructure.Leads;
 using HandilyCommerce.Infrastructure.Persistence;
 using HandilyCommerce.Infrastructure.Products;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +30,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProductRepository, EfProductRepository>();
         // Scoped like the DbContext it depends on (never Singleton → captive DbContext).
         services.AddScoped<ICourseRepository, EfCourseRepository>();
+        services.AddScoped<ILeadRepository, EfLeadRepository>();
         services.AddHealthChecks()
             .AddCheck<ApplicationHealthCheck>("application");
 
