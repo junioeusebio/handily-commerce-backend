@@ -1,5 +1,14 @@
 [
   {
+    "id": "880e09b4-ded5-4ca8-8c3f-64d00eca634a",
+    "title": "feat(leads): POST /leads grava contatos no Postgres (L1)",
+    "summary": "Parte **L1 leads**: POST /api/{version}/leads grava no Postgres (Supabase) os contatos do \"Fale conosco\".",
+    "productVersion": "0.8.0",
+    "mergedAt": "2026-10-15T14:11:00Z",
+    "prNumber": 29,
+    "label": "Release Mirror"
+  },
+  {
     "id": "a10c0000-0011-4000-8000-00000000000b",
     "title": "feat: changelog API for Major/Mirror releases",
     "summary": "Changelog API for the FE \"What's new\" modal: hexagonal ports, GET /api/v1/changelog from embedded JSON seed, and merge workflow to append Major/Mirror entries.",
