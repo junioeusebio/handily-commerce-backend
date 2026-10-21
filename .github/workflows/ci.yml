@@ -8,7 +8,8 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel a main run mid-migration; PRs still cancel superseded runs.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -130,10 +131,42 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
 
+  migrate:
+    name: Migrate Supabase
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: sonar
+    runs-on: ubuntu-latest
+    concurrency:
+      group: migrate-supabase
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          global-json-file: global.json
+
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Restore
+        run: dotnet restore HandilyCommerce.slnx
+
+      - name: Apply migrations
+        env:
+          RAW_CONN: ${{ secrets.CONNECTIONSTRINGS_DEFAULT }}
+        run: bash scripts/apply-ef-migrations.sh
+
   deploy:
     name: Deploy Render
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: sonar
+    needs: migrate
     runs-on: ubuntu-latest
 
     steps:
@@ -146,3 +179,36 @@ jobs:
             exit 1
           fi
           curl -fsS -X POST "$RENDER_DEPLOY_HOOK"
+
+  smoke:
+    name: Smoke Test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Ping + apiVersion matches Directory.Build.props
+        env:
+          BASE_URL: https://handily-commerce-backend.onrender.com/api/v1
+        run: |
+          expected=$(grep -oP '(?<=<Version>)[^<]+' Directory.Build.props | head -1)
+          echo "Expected version: $expected"
+          # Render free: cold start + deploy build can take minutes. Poll up to ~10 min.
+          for i in $(seq 1 20); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$BASE_URL/ping" || echo 000)
+            version=$(curl -fsS --max-time 60 "$BASE_URL/apiVersion" 2>/dev/null | jq -r '.version // empty' || true)
+            echo "Try $i: ping=$code version=${version:-?}"
+            if [ "$code" = "200" ] && [ "$version" = "$expected" ]; then
+              echo "Smoke OK"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "Smoke FAILED: API not healthy on version $expected after ~10 min"
+          exit 1

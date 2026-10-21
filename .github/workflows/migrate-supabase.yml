@@ -1,6 +1,6 @@
 name: Migrate Supabase
 
-# Password stays in Actions secret CONNECTIONSTRINGS_DEFAULT (never in git/logs).
+# Manual re-run only. Password stays in Actions secret CONNECTIONSTRINGS_DEFAULT (never in git/logs).
 on:
   workflow_dispatch:
     inputs:
@@ -8,14 +8,9 @@ on:
         description: Git ref that contains the EF migrations (branch, tag, or SHA)
         required: true
         default: main
-  push:
-    branches: [main]
-    paths:
-      - src/HandilyCommerce.Infrastructure/Persistence/Migrations/**
-      # Re-apply pending migrations when the migrate tooling itself changes.
-      - scripts/apply-ef-migrations.sh
-      - scripts/parse-conn-string.py
-      - .github/workflows/migrate-supabase.yml
+
+# Push to main runs migrations inside ci.yml (build → sonar → migrate → deploy → smoke).
+# This workflow is manual-only now.
 
 concurrency:
   group: migrate-supabase
