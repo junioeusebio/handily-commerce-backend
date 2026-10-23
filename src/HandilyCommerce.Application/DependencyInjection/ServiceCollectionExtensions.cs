@@ -29,6 +29,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICoursePort, CourseService>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<ILeadPort, LeadService>();
+        services.TryAddSingleton(new LeadNotificationOptions());
+        services.AddScoped<LeadNotificationService>();
         return services;
     }
 }

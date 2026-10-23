@@ -1,11 +1,14 @@
+using HandilyCommerce.Application.Leads;
 using HandilyCommerce.Domain.Changelog;
 using HandilyCommerce.Domain.Courses;
 using HandilyCommerce.Domain.Leads;
+using HandilyCommerce.Domain.Notifications;
 using HandilyCommerce.Domain.Products;
 using HandilyCommerce.Infrastructure.Changelog;
 using HandilyCommerce.Infrastructure.Courses;
 using HandilyCommerce.Infrastructure.Health;
 using HandilyCommerce.Infrastructure.Leads;
+using HandilyCommerce.Infrastructure.Notifications;
 using HandilyCommerce.Infrastructure.Persistence;
 using HandilyCommerce.Infrastructure.Products;
 using Microsoft.EntityFrameworkCore;
@@ -31,9 +34,26 @@ public static class ServiceCollectionExtensions
         // Scoped like the DbContext it depends on (never Singleton → captive DbContext).
         services.AddScoped<ICourseRepository, EfCourseRepository>();
         services.AddScoped<ILeadRepository, EfLeadRepository>();
+        AddLeadNotifications(services, configuration);
         services.AddHealthChecks()
             .AddCheck<ApplicationHealthCheck>("application");
 
         return services;
+    }
+
+    private static void AddLeadNotifications(IServiceCollection services, IConfiguration configuration)
+    {
+        var resend = new ResendOptions();
+        configuration.GetSection(ResendOptions.SectionName).Bind(resend);
+        var leadNotification = new LeadNotificationOptions();
+        configuration.GetSection(LeadNotificationOptions.SectionName).Bind(leadNotification);
+
+        services.AddSingleton(resend);
+        services.AddSingleton(leadNotification);
+        services.AddHttpClient<IEmailSender, ResendEmailSender>(client => client.Timeout = TimeSpan.FromSeconds(15));
+        services.AddScoped<IEmailSendLogRepository, EfEmailSendLogRepository>();
+        services.AddSingleton<LeadNotificationQueue>();
+        services.AddSingleton<ILeadNotificationQueue>(sp => sp.GetRequiredService<LeadNotificationQueue>());
+        services.AddHostedService<LeadNotificationWorker>();
     }
 }
