@@ -7,10 +7,45 @@ public class LeadServiceTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 14, 12, 0, 0, TimeSpan.Zero);
 
-    private static (LeadService Sut, FakeRepository Repo) Create()
+    private static (LeadService Sut, FakeRepository Repo) Create() => Create(new FakeQueue());
+
+    private static (LeadService Sut, FakeRepository Repo) Create(ILeadNotificationQueue queue)
     {
         var repo = new FakeRepository();
-        return (new LeadService(repo, new FixedTimeProvider(Now)), repo);
+        return (new LeadService(repo, queue, new FixedTimeProvider(Now)), repo);
+    }
+
+    [Fact]
+    public void Create_WithValidInput_EnqueuesNotification()
+    {
+        var queue = new FakeQueue();
+        var (sut, _) = Create(queue);
+
+        var result = sut.Create(new CreateLeadCommand("Ana", "ana@x.com", "Recife", null));
+
+        Assert.Same(result.Lead, Assert.Single(queue.Leads));
+    }
+
+    [Fact]
+    public void Create_WhenNotificationThrows_StillSucceeds()
+    {
+        var (sut, repo) = Create(new ThrowingQueue());
+
+        var result = sut.Create(new CreateLeadCommand("Ana", "ana@x.com", "Recife", null));
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(repo.Leads);
+    }
+
+    [Fact]
+    public void Create_WithInvalidInput_DoesNotEnqueue()
+    {
+        var queue = new FakeQueue();
+        var (sut, _) = Create(queue);
+
+        sut.Create(new CreateLeadCommand(null, null, null, null));
+
+        Assert.Empty(queue.Leads);
     }
 
     [Fact]
@@ -108,6 +143,18 @@ public class LeadServiceTests
         public List<Lead> Leads { get; } = [];
 
         public void Add(Lead lead) => Leads.Add(lead);
+    }
+
+    private sealed class FakeQueue : ILeadNotificationQueue
+    {
+        public List<Lead> Leads { get; } = [];
+
+        public void Enqueue(Lead lead) => Leads.Add(lead);
+    }
+
+    private sealed class ThrowingQueue : ILeadNotificationQueue
+    {
+        public void Enqueue(Lead lead) => throw new InvalidOperationException("boom");
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider

@@ -6,7 +6,10 @@ namespace HandilyCommerce.Application.Leads;
 /// <summary>
 /// Use case: validate and persist a contact lead ("Fale conosco").
 /// </summary>
-public sealed class LeadService(ILeadRepository repository, TimeProvider timeProvider) : ILeadPort
+public sealed class LeadService(
+    ILeadRepository repository,
+    ILeadNotificationQueue notificationQueue,
+    TimeProvider timeProvider) : ILeadPort
 {
     public const int NameMaxLength = 120;
     public const int EmailMaxLength = 254;
@@ -51,7 +54,21 @@ public sealed class LeadService(ILeadRepository repository, TimeProvider timePro
             timeProvider.GetUtcNow());
 
         repository.Add(lead);
+        TryNotify(lead);
         return CreateLeadResult.Success(lead);
+    }
+
+    /// <summary>The lead is already saved: a notification problem must never fail the request.</summary>
+    private void TryNotify(Lead lead)
+    {
+        try
+        {
+            notificationQueue.Enqueue(lead);
+        }
+        catch (Exception)
+        {
+            // Intentionally ignored: e-mail is best-effort; attempts are audited in EmailSendLogs.
+        }
     }
 
     private static void Required(
