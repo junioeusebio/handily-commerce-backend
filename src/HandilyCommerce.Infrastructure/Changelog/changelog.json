@@ -1,5 +1,14 @@
 [
   {
+    "id": "f87ee900-70fc-45d9-8ddb-9e33f755d90f",
+    "title": "feat(leads): e-mail de novo lead via Resend + log EmailSendLogs",
+    "summary": "## O que muda Quando o POST /leads cria um lead, a API envia um e-mail via **Resend** para ajksys@protonmail.com com assunto **[NOVO CONTATO] - Lead BCC** e HTML responsivo (tabela + CSS inline, valores com HTML-encode): nome, e-mail, município, mensagem e data/hora (Brasília).",
+    "productVersion": "0.9.0",
+    "mergedAt": "2026-10-23T20:04:31Z",
+    "prNumber": 32,
+    "label": "Release Mirror"
+  },
+  {
     "id": "a10c0000-0011-4000-8000-00000000000b",
     "title": "feat: changelog API for Major/Mirror releases",
     "summary": "Changelog API for the FE \"What's new\" modal: hexagonal ports, GET /api/v1/changelog from embedded JSON seed, and merge workflow to append Major/Mirror entries.",
