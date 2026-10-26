@@ -1,5 +1,14 @@
 [
   {
+    "id": "990fd863-c105-4c13-b860-3f37bc20f8e2",
+    "title": "feat(auth): C1 login stub com JWT",
+    "summary": "## Parte C1 — login simples com JWT",
+    "productVersion": "0.10.0",
+    "mergedAt": "2026-10-26T22:38:43Z",
+    "prNumber": 33,
+    "label": "Release Mirror"
+  },
+  {
     "id": "a10c0000-0011-4000-8000-00000000000b",
     "title": "feat: changelog API for Major/Mirror releases",
     "summary": "Changelog API for the FE \"What's new\" modal: hexagonal ports, GET /api/v1/changelog from embedded JSON seed, and merge workflow to append Major/Mirror entries.",
