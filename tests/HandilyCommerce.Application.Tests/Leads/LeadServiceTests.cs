@@ -1,3 +1,4 @@
+using HandilyCommerce.Application.Tests.Fakes;
 using HandilyCommerce.Application.Leads;
 using HandilyCommerce.Domain.Leads;
 
@@ -138,12 +139,7 @@ public class LeadServiceTests
         Assert.IsType<ILeadPort>(sut, exactMatch: false);
     }
 
-    private sealed class FakeRepository : ILeadRepository
-    {
-        public List<Lead> Leads { get; } = [];
-
-        public void Add(Lead lead) => Leads.Add(lead);
-    }
+    private sealed class FakeRepository : InMemoryLeadRepository;
 
     private sealed class FakeQueue : ILeadNotificationQueue
     {

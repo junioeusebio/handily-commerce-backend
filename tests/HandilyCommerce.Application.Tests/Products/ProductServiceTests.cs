@@ -1,3 +1,4 @@
+using HandilyCommerce.Application.Tests.Fakes;
 using HandilyCommerce.Application.Products;
 using HandilyCommerce.Domain.Products;
 
@@ -45,12 +46,5 @@ public class ProductServiceTests
         Assert.IsAssignableFrom<IProductPort>(service);
     }
 
-    private sealed class FakeRepository : IProductRepository
-    {
-        private readonly IReadOnlyList<Product> _products;
-
-        public FakeRepository(params Product[] products) => _products = products;
-
-        public IReadOnlyList<Product> ListAll() => _products;
-    }
+    private sealed class FakeRepository(params Product[] products) : InMemoryProductRepository(products);
 }

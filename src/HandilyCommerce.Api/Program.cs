@@ -1,4 +1,5 @@
 using System.Reflection;
+using HandilyCommerce.Api.Admin;
 using HandilyCommerce.Api.Auth;
 using HandilyCommerce.Api.Courses;
 using HandilyCommerce.Api.Observability;
@@ -68,8 +69,8 @@ builder.Services.AddCors(options =>
                 "https://handily-commerce-backend.onrender.com",
                 "http://localhost:4200",
                 "https://localhost:4200")
-            .WithMethods("GET", "POST", "OPTIONS")
-            .AllowAnyHeader();
+            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+            .WithHeaders("Authorization", "Content-Type", "Accept");
     });
 });
 
@@ -142,6 +143,7 @@ var coursesPath = apiOptions.Path("courses");
 var leadsPath = apiOptions.Path("leads");
 var loginPath = apiOptions.Path("auth", "login");
 var mePath = apiOptions.Path("auth", "me");
+var adminPath = apiOptions.Path("admin");
 
 if (app.Logger.IsEnabled(LogLevel.Information))
 {
@@ -241,6 +243,9 @@ app.MapPost(leadsPath, (CreateLeadCommand command, ILeadPort leadPort) =>
 
 // Auth stub (C1): admin from Auth__* env; GET auth/me proves the bearer guard.
 app.MapAuthEndpoints(loginPath, mePath);
+
+// Admin area (bearer only): leads, catalog management and dashboard summary.
+app.MapAdminEndpoints(adminPath);
 
 try
 {
