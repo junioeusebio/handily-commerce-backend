@@ -1,3 +1,4 @@
+using HandilyCommerce.Application.Tests.Fakes;
 using HandilyCommerce.Application.Courses;
 using HandilyCommerce.Domain.Courses;
 
@@ -35,12 +36,5 @@ public class CourseServiceTests
         Assert.IsType<ICoursePort>(service, exactMatch: false);
     }
 
-    private sealed class FakeRepository : ICourseRepository
-    {
-        private readonly IReadOnlyList<Course> _courses;
-
-        public FakeRepository(params Course[] courses) => _courses = courses;
-
-        public IReadOnlyList<Course> ListAll() => _courses;
-    }
+    private sealed class FakeRepository(params Course[] courses) : InMemoryCourseRepository(courses);
 }

@@ -1,3 +1,4 @@
+using HandilyCommerce.Application.Tests.Fakes;
 using HandilyCommerce.Application.ApiVersion;
 using HandilyCommerce.Application.Changelog;
 using HandilyCommerce.Application.Courses;
@@ -138,13 +139,7 @@ public class ServiceCollectionExtensionsTests
         public IReadOnlyList<ChangelogEntry> ListAll() => Array.Empty<ChangelogEntry>();
     }
 
-    private sealed class FakeProductRepository : IProductRepository
-    {
-        public IReadOnlyList<Product> ListAll() => Array.Empty<Product>();
-    }
+    private sealed class FakeProductRepository : InMemoryProductRepository;
 
-    private sealed class FakeCourseRepository : ICourseRepository
-    {
-        public IReadOnlyList<Course> ListAll() => Array.Empty<Course>();
-    }
+    private sealed class FakeCourseRepository : InMemoryCourseRepository;
 }

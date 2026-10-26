@@ -9,10 +9,14 @@ namespace HandilyCommerce.Domain.Leads;
 /// <param name="Municipality">Municipality (município) the contact represents.</param>
 /// <param name="Message">Optional free-text message.</param>
 /// <param name="CreatedAt">Creation instant (UTC).</param>
+/// <param name="Status">Internal follow-up status (admin).</param>
+/// <param name="InternalNote">Internal note (admin only, never public).</param>
 public sealed record Lead(
     Guid Id,
     string Name,
     string Email,
     string Municipality,
     string? Message,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    LeadStatus Status = LeadStatus.Novo,
+    string? InternalNote = null);
