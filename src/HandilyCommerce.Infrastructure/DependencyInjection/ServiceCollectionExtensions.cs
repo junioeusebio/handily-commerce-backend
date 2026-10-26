@@ -1,9 +1,12 @@
+using HandilyCommerce.Application.Auth;
 using HandilyCommerce.Application.Leads;
+using HandilyCommerce.Domain.Auth;
 using HandilyCommerce.Domain.Changelog;
 using HandilyCommerce.Domain.Courses;
 using HandilyCommerce.Domain.Leads;
 using HandilyCommerce.Domain.Notifications;
 using HandilyCommerce.Domain.Products;
+using HandilyCommerce.Infrastructure.Auth;
 using HandilyCommerce.Infrastructure.Changelog;
 using HandilyCommerce.Infrastructure.Courses;
 using HandilyCommerce.Infrastructure.Health;
@@ -35,6 +38,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICourseRepository, EfCourseRepository>();
         services.AddScoped<ILeadRepository, EfLeadRepository>();
         AddLeadNotifications(services, configuration);
+        AddAuth(services, configuration);
         services.AddHealthChecks()
             .AddCheck<ApplicationHealthCheck>("application");
 
@@ -55,5 +59,16 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<LeadNotificationQueue>();
         services.AddSingleton<ILeadNotificationQueue>(sp => sp.GetRequiredService<LeadNotificationQueue>());
         services.AddHostedService<LeadNotificationWorker>();
+    }
+
+    private static void AddAuth(IServiceCollection services, IConfiguration configuration)
+    {
+        var auth = new AuthOptions();
+        configuration.GetSection(AuthOptions.SectionName).Bind(auth);
+        auth.Validate();
+
+        services.AddSingleton(auth);
+        services.AddSingleton<IPasswordVerifier, Pbkdf2PasswordVerifier>();
+        services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
     }
 }
