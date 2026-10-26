@@ -1,4 +1,5 @@
 using HandilyCommerce.Application.ApiVersion;
+using HandilyCommerce.Application.Auth;
 using HandilyCommerce.Application.Changelog;
 using HandilyCommerce.Application.Courses;
 using HandilyCommerce.Application.Health;
@@ -6,6 +7,7 @@ using HandilyCommerce.Application.Leads;
 using HandilyCommerce.Application.Ping;
 using HandilyCommerce.Application.Products;
 using HandilyCommerce.Domain.ApiVersion;
+using HandilyCommerce.Domain.Auth;
 using HandilyCommerce.Domain.Changelog;
 using HandilyCommerce.Domain.Courses;
 using HandilyCommerce.Domain.Health;
@@ -31,6 +33,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILeadPort, LeadService>();
         services.TryAddSingleton(new LeadNotificationOptions());
         services.AddScoped<LeadNotificationService>();
+        services.TryAddSingleton(new AuthOptions());
+        services.AddScoped<IAuthPort, AuthService>();
         return services;
     }
 }

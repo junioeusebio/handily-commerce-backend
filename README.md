@@ -170,6 +170,28 @@ Logs always go to the console (Render → **Logs** tab) and, when enabled, to **
 - `Grafana Loki config: …` warnings flag an OTLP URL, the stack URL, a non-numeric user or a token not starting with `glc_`.
 - `[Serilog SelfLog] … received Unauthorized from Loki` (wrong user/token or token without `logs:write`) or `received NotFound` (wrong URL). Push errors go to stderr via Serilog SelfLog.
 
+## Auth (login stub, JWT)
+
+- `POST /api/v1/auth/login` with `{ "email", "password" }` → `200 { accessToken, expiresAt }`; wrong credentials → `401` ProblemDetails; missing fields → `400`.
+- `GET /api/v1/auth/me` with `Authorization: Bearer <accessToken>` → `{ email }` (401 without token). Other endpoints stay public.
+- In Scalar, use **Auth → Bearer** to paste the token.
+
+**Enable on Render** (login answers 401 until the first three are set):
+
+| Env var | Notes |
+| --- | --- |
+| `Auth__AdminEmail` | admin e-mail |
+| `Auth__AdminPasswordHash` | `pbkdf2-sha256$<iterations>$<saltBase64>$<hashBase64>` (never the plain password) |
+| `Auth__JwtKey` | random secret, at least 32 bytes |
+| `Auth__Issuer`, `Auth__Audience`, `Auth__ExpiresMinutes` | optional (defaults: `handily-commerce-backend`, `handily-commerce-frontend`, `60`) |
+
+Generate the hash and a key locally (prompts for the password, prints nothing secret to history):
+
+```bash
+python3 -c "import hashlib,os,base64,getpass;s=os.urandom(16);i=210000;h=hashlib.pbkdf2_hmac('sha256',getpass.getpass().encode(),s,i);print(f'pbkdf2-sha256\${i}\${base64.b64encode(s).decode()}\${base64.b64encode(h).decode()}')"
+openssl rand -base64 48
+```
+
 ## Deploy on Render (free)
 
 This repo includes a Docker image (`Dockerfile`) and a Render Blueprint (`render.yaml`) for a **free** web service. Postgres is hosted on **Supabase** (not Render).

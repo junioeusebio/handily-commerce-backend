@@ -1,4 +1,5 @@
 using System.Reflection;
+using HandilyCommerce.Api.Auth;
 using HandilyCommerce.Api.Courses;
 using HandilyCommerce.Api.Observability;
 using HandilyCommerce.Api.OpenApi;
@@ -74,6 +75,8 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddOpenApi(options =>
 {
+    options.AddDocumentTransformer<BearerSecurityTransformer>();
+    options.AddOperationTransformer<BearerSecurityTransformer>();
     options.AddDocumentTransformer((document, context, cancellationToken) =>
     {
         var api = context.ApplicationServices
@@ -113,6 +116,7 @@ builder.Services.AddOpenApi(options =>
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddJwtAuth(builder.Configuration);
 
 var app = builder.Build();
 
@@ -136,6 +140,8 @@ var changelogPath = apiOptions.Path("changelog");
 var productsPath = apiOptions.Path("products");
 var coursesPath = apiOptions.Path("courses");
 var leadsPath = apiOptions.Path("leads");
+var loginPath = apiOptions.Path("auth", "login");
+var mePath = apiOptions.Path("auth", "me");
 
 if (app.Logger.IsEnabled(LogLevel.Information))
 {
@@ -168,6 +174,10 @@ if (app.Environment.IsDevelopment())
 
 // CORS before Map* so GitHub Pages (and local Angular) can call the API.
 app.UseCors();
+
+// Bearer JWT: only endpoints with RequireAuthorization() are protected; the rest stay public.
+app.UseAuthentication();
+app.UseAuthorization();
 
 // OpenAPI + Scalar UI available in all environments (needed for Render demo).
 app.MapOpenApi();
@@ -228,6 +238,9 @@ app.MapPost(leadsPath, (CreateLeadCommand command, ILeadPort leadPort) =>
     .Accepts<CreateLeadCommand>("application/json")
     .Produces(StatusCodes.Status201Created)
     .ProducesValidationProblem();
+
+// Auth stub (C1): admin from Auth__* env; GET auth/me proves the bearer guard.
+app.MapAuthEndpoints(loginPath, mePath);
 
 try
 {
