@@ -48,7 +48,7 @@ Interactive docs (Scalar) and the raw OpenAPI document are available in **all en
 
 Document **Info.Title** / **Info.Version** come from the same `Api` section (`AddOpenApi` transformer), so the UI stays in sync with config.
 
-OpenAPI `servers` use HTTPS for Render (`Api:PublicBaseUrl` or request host + forwarded proto; never `http://…onrender.com`), so Scalar **Try request** works without mixed content.
+OpenAPI `servers` use the public HTTPS base URL, so Scalar **Try request** works without mixed content.
 
 See `HandilyCommerce.Api.http` — use `@ApiVersion` (must match `Api:Version`).
 
@@ -98,36 +98,20 @@ Foundation for FE catalog (A4/later). Returns products with nested items (empty 
 []
 ```
 
-### Database (Supabase Postgres)
+### Leads
 
-EF Core + Npgsql. **Never commit the password.** Prefer the **Transaction pooler** (port 6543) for the app / Render:
+`POST /api/v1/leads` with `{ name, email, municipality, message? }` → `201 { id }`; invalid fields → `400`.
 
-```bash
-# Preferred (local): user-secrets (not in git) — Transaction pooler
-dotnet user-secrets set "ConnectionStrings:Default"   "Host=aws-0-sa-east-1.pooler.supabase.com;Port=6543;Database=postgres;Username=postgres.dpvkazuksnmcyfkkbkex;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true"   --project src/HandilyCommerce.Api
+### Database (Postgres)
 
-# Env (Render / shell) — ConnectionStrings__Default
-export ConnectionStrings__Default='Host=aws-0-sa-east-1.pooler.supabase.com;Port=6543;Database=postgres;Username=postgres.dpvkazuksnmcyfkkbkex;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true'
-
-# URI form (pooler)
-# postgresql://postgres.dpvkazuksnmcyfkkbkex:YOUR_PASSWORD@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require
-```
-
-Optional CI: GitHub Actions secret **`CONNECTIONSTRINGS_DEFAULT`** (same pooler string). Tests stay green **without** a live DB (EF InMemory); the secret is only if a future workflow needs it.
-
-**Migrate Supabase / `CONNECTIONSTRINGS_DEFAULT`:** the Npgsql `Host=aws-0-sa-east-1.pooler.supabase.com;Port=6543;…` form is preferred for the GitHub Actions secret and Render, but a `postgresql://user:password@host:port/db` URI also works: the parser splits user-info from host at the **last** `@`, so raw `@`, `:`, `/`, `?` in the password are fine (percent-encoding such as `%40` is still decoded; values with `;` or quotes are quoted for Npgsql). The workflow never prints the connection string and registers the password with `::add-mask::` before running `dotnet ef`, so fragments can't leak through Npgsql error messages. It runs on push to `main` when migrations **or** the migrate tooling change, and via `workflow_dispatch`. Manual parse checks: `bash scripts/check-conn-string-parse.sh`.
-
-**Transaction pooler (6543) + Npgsql pooling:** the app (`PostgresConnectionString.ForPooler`) and the migrate script add `No Reset On Close=true` automatically when the port is 6543. Without it, Npgsql prepends `DISCARD ALL` when reusing a pooled connection, which Supavisor in transaction mode does not answer, so every reused connection hangs until the 30s timeout (`Timeout during reading attempt`). The migrate log prints a non-secret `Target: host=… port=… (mode)` line (no user/password).
-
-**Migrations note:** if the pooler rejects DDL, use the direct host temporarily for `dotnet ef database update` only:
-
-`Host=db.dpvkazuksnmcyfkkbkex.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true`
+EF Core + Npgsql. **Never commit credentials.** Locally, use user-secrets with a placeholder connection string:
 
 ```bash
+dotnet user-secrets set "ConnectionStrings:Default" "Host=<host>;Port=<port>;Database=<db>;Username=<user>;Password=<password>;SSL Mode=Require" --project src/HandilyCommerce.Api
 dotnet ef database update --project src/HandilyCommerce.Infrastructure --startup-project src/HandilyCommerce.Api
 ```
 
-In Development, the API also runs `Database.MigrateAsync()` on startup when `ConnectionStrings:Default` is non-empty.
+Tests run without a live DB (EF InMemory). In Development, the API applies migrations on startup when a connection string is set. In hosted environments, configure via the service's environment variables (see your private notes).
 
 
 ## Structure (hexagonal)
@@ -145,62 +129,17 @@ src/
 - Cursor agents/rules: [AGENTS.md](AGENTS.md) and `.cursor/`
 
 
-## Logs (Grafana Cloud)
+## Logs
 
-Logs always go to the console (Render → **Logs** tab) and, when enabled, to **Grafana Cloud Loki** for search in a web UI.
+Logs always go to the console and, when enabled, to a hosted log backend. Unhandled errors return `application/problem+json` with a `traceId` (no exception details); search that `traceId` in the log UI to find the error. Configure via the service's environment variables (see your private notes).
 
-**Open:** [Grafana Explore](https://fondbanana2441.grafana.net/explore) (stack [fondbanana2441.grafana.net](https://fondbanana2441.grafana.net/); or grafana.com → sign in → stack → **Explore**) → data source **Loki** (`grafanacloud-fondbanana2441-logs`). Pick a time range at the top right.
+## Auth
 
-**Basic LogQL queries:**
+A login endpoint issues a short-lived JWT used by protected routes; catalog, courses, leads and ping stay public. Credentials and signing keys are configured via the service's environment variables (see your private notes) — never in the repo.
 
-| Goal | Query |
-| --- | --- |
-| All API logs | `{app="handily-commerce-backend"}` |
-| Errors only | `{app="handily-commerce-backend", level="error"}` |
-| One request by trace id | `{app="handily-commerce-backend"} \|= "<traceId>"` |
-| By path (text match) | `{app="handily-commerce-backend"} \|= "/api/v1/products"` |
-| By path (request log field) | `{app="handily-commerce-backend"} \| json \| RequestPath="/api/v1/products"` |
+## Deploy
 
-**From a 500 to the error:** unhandled errors return `application/problem+json` with a `traceId` (no exception details). Copy it from the response body (browser DevTools → Network → response), then run `{app="handily-commerce-backend"} |= "<traceId>"`. You get the `Unhandled exception on {Method} {Path} (traceId …)` entry with the stack trace, plus the request summary line (`HTTP GET /api/v1/… responded 500`).
-
-**Enable on Render:** set `GrafanaLoki__Url`, `GrafanaLoki__Username` and `GrafanaLoki__ApiToken` in the service environment (the sink stays off unless all three are set; startup logs `Grafana Loki log sink enabled|disabled`).
-
-**No logs in Grafana?** Check Render logs right after startup:
-- `Grafana Loki target: host=… user=12***** (N chars) token=set` (safe summary; the token is never printed). Host must be the **Loki** URL (`logs-prod-….grafana.net`, base only — a pasted `/loki/api/v1/push` or trailing `/` is stripped), user the numeric **Loki** user id.
-- `Grafana Loki config: …` warnings flag an OTLP URL, the stack URL, a non-numeric user or a token not starting with `glc_`.
-- `[Serilog SelfLog] … received Unauthorized from Loki` (wrong user/token or token without `logs:write`) or `received NotFound` (wrong URL). Push errors go to stderr via Serilog SelfLog.
-
-## Auth (login stub, JWT)
-
-- `POST /api/v1/auth/login` with `{ "email", "password" }` → `200 { accessToken, expiresAt }`; wrong credentials → `401` ProblemDetails; missing fields → `400`.
-- `GET /api/v1/auth/me` with `Authorization: Bearer <accessToken>` → `{ email }` (401 without token). Other endpoints stay public.
-- In Scalar, use **Auth → Bearer** to paste the token.
-
-**Enable on Render** (login answers 401 until the first three are set):
-
-| Env var | Notes |
-| --- | --- |
-| `Auth__AdminEmail` | admin e-mail |
-| `Auth__AdminPasswordHash` | `pbkdf2-sha256$<iterations>$<saltBase64>$<hashBase64>` (never the plain password) |
-| `Auth__JwtKey` | random secret, at least 32 bytes |
-| `Auth__Issuer`, `Auth__Audience`, `Auth__ExpiresMinutes` | optional (defaults: `handily-commerce-backend`, `handily-commerce-frontend`, `60`) |
-
-Generate the hash and a key locally (prompts for the password, prints nothing secret to history):
-
-```bash
-python3 -c "import hashlib,os,base64,getpass;s=os.urandom(16);i=210000;h=hashlib.pbkdf2_hmac('sha256',getpass.getpass().encode(),s,i);print(f'pbkdf2-sha256\${i}\${base64.b64encode(s).decode()}\${base64.b64encode(h).decode()}')"
-openssl rand -base64 48
-```
-
-## Deploy on Render (free)
-
-This repo includes a Docker image (`Dockerfile`) and a Render Blueprint (`render.yaml`) for a **free** web service. Postgres is hosted on **Supabase** (not Render).
-
-1. Create a [Render](https://render.com) account and connect the GitHub repo `junioeusebio/handily-commerce-backend`.
-2. Use **New → Blueprint** and select this repository (Render reads `render.yaml`), or create a **Web Service** with Docker runtime pointing at `./Dockerfile`.
-3. Choose the **free** plan. Expect **cold starts** after idle (first request can take several seconds).
-4. Health check: `GET /api/v1/health` (also configured as `healthCheckPath` in the Blueprint).
-5. Set env var **`ConnectionStrings__Default`** on Render to the **Transaction pooler** connection string (password from Supabase dashboard — never commit it). Optional GitHub Actions secret **`CONNECTIONSTRINGS_DEFAULT`** for future workflows — CI tests do **not** require it (EF InMemory). Run migrations once against Supabase (`dotnet ef database update`; use direct host if pooler blocks DDL) before relying on `/changelog`.
+The repo ships a `Dockerfile` and a `render.yaml` Blueprint. Configure secrets via the service's environment variables (see your private notes).
 
 Local Docker (optional):
 
