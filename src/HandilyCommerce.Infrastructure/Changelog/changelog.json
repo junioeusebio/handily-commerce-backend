@@ -1,5 +1,14 @@
 [
   {
+    "id": "5f25d67e-fddb-4ca4-8ae9-d016e908290f",
+    "title": "feat(admin): API admin para leads, catálogo e resumo (0.11.0)",
+    "summary": "API admin para o painel: leads (lista paginada, detalhe, status/nota interna, exclusão), CRUD de cursos e produtos com itens, e resumo. Versão **0.11.0** (Release Mirror).",
+    "productVersion": "0.11.0",
+    "mergedAt": "2026-10-26T23:25:51Z",
+    "prNumber": 35,
+    "label": "Release Mirror"
+  },
+  {
     "id": "a10c0000-0011-4000-8000-00000000000b",
     "title": "feat: changelog API for Major/Mirror releases",
     "summary": "Changelog API for the FE \"What's new\" modal: hexagonal ports, GET /api/v1/changelog from embedded JSON seed, and merge workflow to append Major/Mirror entries.",
