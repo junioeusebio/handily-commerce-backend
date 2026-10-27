@@ -1,5 +1,14 @@
 [
   {
+    "id": "bf9da7cb-ae41-4312-9d7b-30c40852fe29",
+    "title": "feat(leads): telefone no lead + e-mail (0.12.0)",
+    "summary": "## Resumo Adiciona **telefone** ao lead (\"Fale conosco\") e mostra no e-mail de notificação.",
+    "productVersion": "0.12.0",
+    "mergedAt": "2026-10-27T23:43:13Z",
+    "prNumber": 36,
+    "label": "Release Mirror"
+  },
+  {
     "id": "a10c0000-0011-4000-8000-00000000000b",
     "title": "feat: changelog API for Major/Mirror releases",
     "summary": "Changelog API for the FE \"What's new\" modal: hexagonal ports, GET /api/v1/changelog from embedded JSON seed, and merge workflow to append Major/Mirror entries.",
