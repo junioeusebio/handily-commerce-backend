@@ -141,7 +141,7 @@ public class AdminEndpointsTests(WebApplicationFactory<Program> factory)
     {
         var (anonymous, _) = CreateApp();
         var client = await LoginAsync(anonymous);
-        var body = new { id = "novo-curso", title = "Novo", axis = "mundo-digital", summary = "s", audience = "a", workloadHours = 20 };
+        var body = new { id = "novo-curso", title = "Novo", axis = "mundo-digital", summary = "s", audience = "a", workloadHours = 20, sortOrder = (int?)9 };
 
         using var create = await client.PostAsJsonAsync("/api/v1/admin/courses", body);
         Assert.Equal(HttpStatusCode.Created, create.StatusCode);
@@ -149,14 +149,18 @@ public class AdminEndpointsTests(WebApplicationFactory<Program> factory)
         using var duplicate = await client.PostAsJsonAsync("/api/v1/admin/courses", body);
         Assert.Equal(HttpStatusCode.BadRequest, duplicate.StatusCode);
 
-        using var put = await client.PutAsJsonAsync("/api/v1/admin/courses/novo-curso", body with { title = "Editado" });
+        using var put = await client.PutAsJsonAsync("/api/v1/admin/courses/novo-curso", body with { title = "Editado", sortOrder = (int?)null });
         Assert.Equal(HttpStatusCode.OK, put.StatusCode);
-        Assert.Contains("Editado", await client.GetStringAsync("/api/v1/admin/courses/novo-curso"));
+        Assert.Contains("\"sortOrder\":9", await put.Content.ReadAsStringAsync());
+        var detail = await client.GetStringAsync("/api/v1/admin/courses/novo-curso");
+        Assert.Contains("Editado", detail);
+        Assert.Contains("\"sortOrder\":9", detail);
         using var putMissing = await client.PutAsJsonAsync("/api/v1/admin/courses/nao-tem", body);
         Assert.Equal(HttpStatusCode.NotFound, putMissing.StatusCode);
 
         using var publicList = await anonymous.GetAsync("/api/v1/courses");
         Assert.Equal(HttpStatusCode.OK, publicList.StatusCode);
+        Assert.Contains("\"sortOrder\":9", await publicList.Content.ReadAsStringAsync());
 
         using var delete = await client.DeleteAsync("/api/v1/admin/courses/novo-curso");
         Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
