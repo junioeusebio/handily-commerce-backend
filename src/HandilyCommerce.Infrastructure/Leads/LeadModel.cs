@@ -9,6 +9,7 @@ public static class LeadModel
 {
     public const string TableName = "Leads";
     public const int StatusMaxLength = 16;
+    public const int PhoneMaxLength = 20;
 
     public static void Configure(EntityTypeBuilder<Lead> entity)
     {
@@ -25,6 +26,7 @@ public static class LeadModel
             .HasMaxLength(StatusMaxLength)
             .HasDefaultValue(LeadStatus.Novo)
             .HasSentinel((LeadStatus)(-1));
+        entity.Property(l => l.Phone).HasMaxLength(PhoneMaxLength);
         entity.Property(l => l.InternalNote).HasMaxLength(2000);
         entity.HasIndex(l => l.CreatedAt);
     }

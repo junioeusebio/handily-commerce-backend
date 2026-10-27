@@ -22,7 +22,7 @@ public class LeadServiceTests
         var queue = new FakeQueue();
         var (sut, _) = Create(queue);
 
-        var result = sut.Create(new CreateLeadCommand("Ana", "ana@x.com", "Recife", null));
+        var result = sut.Create(new CreateLeadCommand("Ana", "ana@x.com", "Recife", null, "(11) 91234-5678"));
 
         Assert.Same(result.Lead, Assert.Single(queue.Leads));
     }
@@ -32,7 +32,7 @@ public class LeadServiceTests
     {
         var (sut, repo) = Create(new ThrowingQueue());
 
-        var result = sut.Create(new CreateLeadCommand("Ana", "ana@x.com", "Recife", null));
+        var result = sut.Create(new CreateLeadCommand("Ana", "ana@x.com", "Recife", null, "(11) 91234-5678"));
 
         Assert.True(result.IsSuccess);
         Assert.Single(repo.Leads);
@@ -54,7 +54,7 @@ public class LeadServiceTests
     {
         var (sut, repo) = Create();
 
-        var result = sut.Create(new CreateLeadCommand(" Ana ", " ana@prefeitura.gov.br ", " Recife ", " Olá "));
+        var result = sut.Create(new CreateLeadCommand(" Ana ", " ana@prefeitura.gov.br ", " Recife ", " Olá ", " (81) 3123-4567 "));
 
         Assert.True(result.IsSuccess);
         var lead = Assert.Single(repo.Leads);
@@ -64,6 +64,7 @@ public class LeadServiceTests
         Assert.Equal("ana@prefeitura.gov.br", lead.Email);
         Assert.Equal("Recife", lead.Municipality);
         Assert.Equal("Olá", lead.Message);
+        Assert.Equal("8131234567", lead.Phone);
         Assert.Equal(Now, lead.CreatedAt);
         Assert.Equal(TimeSpan.Zero, lead.CreatedAt.Offset);
     }
@@ -73,7 +74,7 @@ public class LeadServiceTests
     {
         var (sut, repo) = Create();
 
-        var result = sut.Create(new CreateLeadCommand("Ana", "ana@x.com", "Recife", "   "));
+        var result = sut.Create(new CreateLeadCommand("Ana", "ana@x.com", "Recife", "   ", "11912345678"));
 
         Assert.True(result.IsSuccess);
         Assert.Null(Assert.Single(repo.Leads).Message);
@@ -88,7 +89,8 @@ public class LeadServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Null(result.Lead);
-        Assert.Equal(["email", "municipality", "name"], result.Errors.Keys.Order());
+        Assert.Equal(["email", "municipality", "name", "phone"], result.Errors.Keys.Order());
+        Assert.Equal(["Telefone é obrigatório."], result.Errors["phone"]);
         Assert.Empty(repo.Leads);
     }
 
@@ -101,7 +103,7 @@ public class LeadServiceTests
     {
         var (sut, repo) = Create();
 
-        var result = sut.Create(new CreateLeadCommand("Ana", email, "Recife", null));
+        var result = sut.Create(new CreateLeadCommand("Ana", email, "Recife", null, "(11) 91234-5678"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(["E-mail inválido."], result.Errors["email"]);
@@ -117,7 +119,8 @@ public class LeadServiceTests
             new string('a', LeadService.NameMaxLength + 1),
             new string('a', LeadService.EmailMaxLength) + "@x.com",
             new string('m', LeadService.MunicipalityMaxLength + 1),
-            new string('x', LeadService.MessageMaxLength + 1)));
+            new string('x', LeadService.MessageMaxLength + 1),
+            "11912345678"));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(["email", "message", "municipality", "name"], result.Errors.Keys.Order());
@@ -156,5 +159,40 @@ public class LeadServiceTests
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    [Theory]
+    [InlineData("(11) 91234-5678", "11912345678")]
+    [InlineData("11 3123-4567", "1131234567")]
+    [InlineData("+55 (21) 98765-4321", "21987654321")]
+    [InlineData("21.98765.4321", "21987654321")]
+    public void Create_WithValidPhone_StoresDigitsOnly(string input, string expected)
+    {
+        var (sut, repo) = Create();
+
+        var result = sut.Create(new CreateLeadCommand("Ana", "ana@x.com", "Recife", null, input));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(expected, Assert.Single(repo.Leads).Phone);
+    }
+
+    [Theory]
+    [InlineData("123")]
+    [InlineData("(11) 1234-567")]
+    [InlineData("119123456789")]
+    [InlineData("01912345678")]
+    [InlineData("abc")]
+    public void Create_WithInvalidPhone_ReturnsPhoneError(string phone)
+    {
+        var (sut, repo) = Create();
+
+        var result = sut.Create(new CreateLeadCommand("Ana", "ana@x.com", "Recife", null, phone));
+
+        Assert.False(result.IsSuccess);
+        var expected = phone == "abc"
+            ? "Telefone é obrigatório."
+            : "Telefone inválido. Informe DDD + número (10 ou 11 dígitos).";
+        Assert.Equal([expected], result.Errors["phone"]);
+        Assert.Empty(repo.Leads);
     }
 }

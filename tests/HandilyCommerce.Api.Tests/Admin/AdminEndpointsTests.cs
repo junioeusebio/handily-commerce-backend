@@ -86,11 +86,23 @@ public class AdminEndpointsTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task CreateLead_WithInvalidPhone_ReturnsPhoneValidationError()
+    {
+        var (anonymous, _) = CreateApp();
+        using var response = await anonymous.PostAsJsonAsync("/api/v1/leads",
+            new { name = "Ana", email = "ana@x.com", municipality = "Recife", phone = "123" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var errors = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.GetProperty("errors");
+        Assert.Equal(JsonValueKind.Array, errors.GetProperty("phone").ValueKind);
+    }
+
+    [Fact]
     public async Task Leads_ListPatchGetDelete_WithToken()
     {
         var (anonymous, _) = CreateApp();
         using var created = await anonymous.PostAsJsonAsync("/api/v1/leads",
-            new { name = "Ana", email = "ana@x.com", municipality = "Recife" });
+            new { name = "Ana", email = "ana@x.com", municipality = "Recife", phone = "(11) 91234-5678" });
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var id = JsonDocument.Parse(await created.Content.ReadAsStringAsync()).RootElement.GetProperty("id").GetGuid();
         var client = await LoginAsync(anonymous);

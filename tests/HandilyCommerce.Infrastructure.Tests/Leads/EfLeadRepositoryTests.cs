@@ -14,7 +14,7 @@ public class EfLeadRepositoryTests
         var options = new DbContextOptionsBuilder<HandilyCommerceDbContext>()
             .UseInMemoryDatabase(nameof(Add_PersistsLead))
             .Options;
-        var lead = new Lead(Guid.NewGuid(), "Ana", "ana@x.com", "Recife", null, DateTimeOffset.UtcNow);
+        var lead = new Lead(Guid.NewGuid(), "Ana", "ana@x.com", "Recife", null, DateTimeOffset.UtcNow, Phone: "11912345678");
 
         using (var context = new HandilyCommerceDbContext(options))
         {
@@ -38,5 +38,7 @@ public class EfLeadRepositoryTests
 
         Assert.Equal(LeadModel.TableName, entity.GetTableName());
         Assert.Equal(120, entity.FindProperty(nameof(Lead.Name))!.GetMaxLength());
+        Assert.Equal(LeadModel.PhoneMaxLength, entity.FindProperty(nameof(Lead.Phone))!.GetMaxLength());
+        Assert.True(entity.FindProperty(nameof(Lead.Phone))!.IsNullable);
     }
 }

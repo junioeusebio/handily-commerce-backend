@@ -16,8 +16,11 @@ public static class LeadEmailTemplate
         var createdAt = TimeZoneInfo.ConvertTime(lead.CreatedAt, BrazilTime)
             .ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture);
 
+        var phone = string.IsNullOrWhiteSpace(lead.Phone) ? "Não informado" : PhoneNumber.Format(lead.Phone);
+
         var rows = string.Concat(
             Row("Nome", lead.Name),
+            Row("Telefone", phone),
             Row("E-mail", lead.Email),
             Row("Município", lead.Municipality),
             Row("Mensagem", lead.Message ?? "—"),
@@ -38,6 +41,7 @@ public static class LeadEmailTemplate
             <tr><td style="background-color:#1e3a8a;padding:24px;color:#ffffff;">
             <p style="margin:0;font-size:12px;letter-spacing:1px;text-transform:uppercase;opacity:0.85;">Handily Commerce · Lead BCC</p>
             <h1 style="margin:8px 0 0;font-size:22px;line-height:1.3;">Novo contato recebido</h1>
+            <p style="margin:12px 0 0;font-size:18px;line-height:1.4;font-weight:bold;">{{WebUtility.HtmlEncode(lead.Name)}} · {{WebUtility.HtmlEncode(phone)}}</p>
             </td></tr>
             <tr><td style="padding:24px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">

@@ -23,6 +23,7 @@ public sealed class LeadService(
         var name = command.Name?.Trim() ?? string.Empty;
         var email = command.Email?.Trim() ?? string.Empty;
         var municipality = command.Municipality?.Trim() ?? string.Empty;
+        var phone = PhoneNumber.Normalize(command.Phone);
         var message = string.IsNullOrWhiteSpace(command.Message) ? null : command.Message.Trim();
 
         var errors = new Dictionary<string, string[]>();
@@ -33,6 +34,15 @@ public sealed class LeadService(
         if (!errors.ContainsKey("email") && !IsValidEmail(email))
         {
             errors["email"] = ["E-mail inválido."];
+        }
+
+        if (phone.Length == 0)
+        {
+            errors["phone"] = ["Telefone é obrigatório."];
+        }
+        else if (!PhoneNumber.IsValid(phone))
+        {
+            errors["phone"] = ["Telefone inválido. Informe DDD + número (10 ou 11 dígitos)."];
         }
 
         if (message is not null && message.Length > MessageMaxLength)
@@ -51,7 +61,8 @@ public sealed class LeadService(
             email,
             municipality,
             message,
-            timeProvider.GetUtcNow());
+            timeProvider.GetUtcNow(),
+            Phone: phone);
 
         repository.Add(lead);
         TryNotify(lead);

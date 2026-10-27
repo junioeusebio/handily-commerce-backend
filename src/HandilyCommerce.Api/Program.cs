@@ -236,7 +236,7 @@ app.MapPost(leadsPath, (CreateLeadCommand command, ILeadPort leadPort) =>
             : Results.ValidationProblem(result.Errors.ToDictionary());
     })
     .WithName("CreateLead")
-    .WithSummary("Registra um contato (lead) do Fale conosco")
+    .WithSummary("Registra um contato (lead) do Fale conosco (nome, e-mail, telefone BR, município)")
     .Accepts<CreateLeadCommand>("application/json")
     .Produces(StatusCodes.Status201Created)
     .ProducesValidationProblem();

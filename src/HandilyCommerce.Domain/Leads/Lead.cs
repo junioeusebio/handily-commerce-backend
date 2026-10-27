@@ -11,6 +11,7 @@ namespace HandilyCommerce.Domain.Leads;
 /// <param name="CreatedAt">Creation instant (UTC).</param>
 /// <param name="Status">Internal follow-up status (admin).</param>
 /// <param name="InternalNote">Internal note (admin only, never public).</param>
+/// <param name="Phone">Brazilian phone, digits only (10 or 11). Null for leads created before the field existed.</param>
 public sealed record Lead(
     Guid Id,
     string Name,
@@ -19,4 +20,5 @@ public sealed record Lead(
     string? Message,
     DateTimeOffset CreatedAt,
     LeadStatus Status = LeadStatus.Novo,
-    string? InternalNote = null);
+    string? InternalNote = null,
+    string? Phone = null);
