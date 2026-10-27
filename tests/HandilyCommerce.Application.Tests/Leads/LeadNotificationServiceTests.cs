@@ -88,6 +88,24 @@ public class LeadNotificationServiceTests
         Assert.Throws<ArgumentNullException>(() => LeadEmailTemplate.Build(null!));
     }
 
+    [Fact]
+    public void Template_WithPhone_ShowsFormattedPhone()
+    {
+        var html = LeadEmailTemplate.Build(Lead with { Phone = "11912345678" });
+
+        Assert.Contains("Telefone", html);
+        Assert.Contains("(11) 91234-5678", html);
+        Assert.DoesNotContain("Não informado", html);
+    }
+
+    [Fact]
+    public void Template_WithoutPhone_ShowsNotInformed()
+    {
+        var html = LeadEmailTemplate.Build(Lead);
+
+        Assert.Contains("N&#227;o informado", html);
+    }
+
     private sealed class FakeSender(Func<EmailMessage, EmailSendResult> send) : IEmailSender
     {
         public EmailMessage? Last { get; private set; }

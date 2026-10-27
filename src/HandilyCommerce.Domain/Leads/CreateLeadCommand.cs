@@ -5,4 +5,5 @@ public sealed record CreateLeadCommand(
     string? Name,
     string? Email,
     string? Municipality,
-    string? Message);
+    string? Message,
+    string? Phone = null);

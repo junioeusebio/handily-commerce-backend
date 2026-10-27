@@ -138,11 +138,12 @@ public sealed record LeadResponse(
     string? Message,
     DateTimeOffset CreatedAt,
     string Status,
-    string? InternalNote)
+    string? InternalNote,
+    string? Phone)
 {
     public static LeadResponse From(Lead lead) =>
         new(lead.Id, lead.Name, lead.Email, lead.Municipality, lead.Message, lead.CreatedAt,
-            lead.Status.ToString(), lead.InternalNote);
+            lead.Status.ToString(), lead.InternalNote, lead.Phone);
 }
 
 public sealed record LeadPageResponse(IReadOnlyList<LeadResponse> Items, int Page, int PageSize, int Total);
