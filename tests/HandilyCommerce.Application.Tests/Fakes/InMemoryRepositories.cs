@@ -44,9 +44,11 @@ public class InMemoryCourseRepository(params Course[] courses) : ICourseReposito
 
     public Dictionary<string, int> SortOrders { get; } = [];
 
-    public IReadOnlyList<Course> ListAll() => Courses;
+    public IReadOnlyList<Course> ListAll() => Courses.Select(WithOrder).ToList();
 
-    public Course? Find(string id) => Courses.FirstOrDefault(c => c.Id == id);
+    public Course? Find(string id) => Courses.FirstOrDefault(c => c.Id == id) is { } c ? WithOrder(c) : null;
+
+    private Course WithOrder(Course c) => SortOrders.TryGetValue(c.Id, out var o) ? c with { DisplayOrder = o } : c;
 
     public void Add(Course course, int? sortOrder)
     {

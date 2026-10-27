@@ -18,7 +18,7 @@ public class CourseAdminServiceTests
         var result = sut.Create(Valid());
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(new Course("novo-curso", "Título", BnccAxis.MundoDigital, "Resumo", "Professores", 40), result.Value);
+        Assert.Equal(new Course("novo-curso", "Título", BnccAxis.MundoDigital, "Resumo", "Professores", 40) { DisplayOrder = 1 }, result.Value);
         Assert.Single(repo.Courses);
         Assert.Equal(result.Value, sut.Find("novo-curso"));
     }
@@ -72,6 +72,20 @@ public class CourseAdminServiceTests
         Assert.Equal(5, repo.SortOrders["c1"]);
         Assert.True(missing.IsNotFound);
         Assert.Contains("title", invalid.Errors.Keys);
+    }
+
+    [Fact]
+    public void Update_WithoutSortOrder_KeepsExistingOrder_AndReturnsIt()
+    {
+        var repo = new InMemoryCourseRepository(new Course("c1", "Antigo", BnccAxis.MundoDigital, "s", "a"));
+        repo.SortOrders["c1"] = 4;
+        var sut = new CourseAdminService(repo);
+
+        var ok = sut.Update("c1", Valid() with { SortOrder = null });
+
+        Assert.True(ok.IsSuccess);
+        Assert.Equal(4, repo.SortOrders["c1"]);
+        Assert.Equal(4, ok.Value!.DisplayOrder);
     }
 
     [Fact]

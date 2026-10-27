@@ -22,6 +22,7 @@ public static class CourseModel
         entity.Property(c => c.Axis).IsRequired().HasConversion<string>().HasMaxLength(64);
         entity.Property(c => c.Summary).IsRequired().HasMaxLength(1000);
         entity.Property(c => c.Audience).IsRequired().HasMaxLength(200);
+        entity.Ignore(c => c.DisplayOrder);
         entity.Property<int>(SortOrderColumn).IsRequired();
         entity.HasIndex(SortOrderColumn);
     }

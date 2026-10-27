@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace HandilyCommerce.Domain.Courses;
 
 /// <summary>
@@ -16,4 +18,10 @@ public sealed record Course(
     BnccAxis Axis,
     string Summary,
     string Audience,
-    int? WorkloadHours = null);
+    int? WorkloadHours = null)
+{
+    /// <summary>Catalog display order (lower first). Filled on reads; null when not loaded from storage.</summary>
+    /// <remarks>Named apart from the EF shadow column <c>SortOrder</c>; serialized as <c>sortOrder</c>.</remarks>
+    [JsonPropertyName("sortOrder")]
+    public int? DisplayOrder { get; init; }
+}
