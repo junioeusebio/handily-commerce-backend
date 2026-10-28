@@ -1,5 +1,14 @@
 [
   {
+    "id": "1a9e81bd-49cf-40da-a315-e0e76e1e5e91",
+    "title": "feat(leads): rate limit por IP no POST /leads (Mirror 0.13.0)",
+    "summary": "Rate limit no POST /api/v1/leads com o RateLimiter nativo do ASP.NET Core (protege a caixa de email e a cota do Resend).",
+    "productVersion": "0.13.0",
+    "mergedAt": "2026-10-28T00:14:57Z",
+    "prNumber": 38,
+    "label": "Release Mirror"
+  },
+  {
     "id": "a10c0000-0011-4000-8000-00000000000b",
     "title": "feat: changelog API for Major/Mirror releases",
     "summary": "Changelog API for the FE \"What's new\" modal: hexagonal ports, GET /api/v1/changelog from embedded JSON seed, and merge workflow to append Major/Mirror entries.",
