@@ -38,7 +38,7 @@ public sealed partial class CourseAdminService(ICourseRepository repository) : I
         }
 
         repository.Add(course!, command.SortOrder);
-        return AdminResult<Course>.Success(course!);
+        return AdminResult<Course>.Success(repository.Find(id) ?? course!);
     }
 
     public AdminResult<Course> Update(string id, CourseUpsertCommand command)
@@ -52,8 +52,9 @@ public sealed partial class CourseAdminService(ICourseRepository repository) : I
             return AdminResult<Course>.Invalid(errors);
         }
 
+        // Null SortOrder keeps the stored order (FE may omit it).
         return repository.Update(course!, command.SortOrder)
-            ? AdminResult<Course>.Success(course!)
+            ? AdminResult<Course>.Success(repository.Find(id) ?? course!)
             : AdminResult<Course>.NotFound();
     }
 
