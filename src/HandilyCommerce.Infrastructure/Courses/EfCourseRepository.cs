@@ -15,10 +15,18 @@ public sealed class EfCourseRepository(HandilyCommerceDbContext dbContext) : ICo
             .AsNoTracking()
             .OrderBy(c => EF.Property<int>(c, CourseModel.SortOrderColumn))
             .ThenBy(c => c.Id)
+            .Select(c => new { Course = c, Order = EF.Property<int>(c, CourseModel.SortOrderColumn) })
+            .AsEnumerable()
+            .Select(r => r.Course with { DisplayOrder = r.Order })
             .ToList();
 
     public Course? Find(string id) =>
-        dbContext.Courses.AsNoTracking().FirstOrDefault(c => c.Id == id);
+        dbContext.Courses.AsNoTracking()
+            .Where(c => c.Id == id)
+            .Select(c => new { Course = c, Order = EF.Property<int>(c, CourseModel.SortOrderColumn) })
+            .AsEnumerable()
+            .Select(r => r.Course with { DisplayOrder = r.Order })
+            .FirstOrDefault();
 
     public void Add(Course course, int? sortOrder)
     {

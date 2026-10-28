@@ -58,10 +58,30 @@ public class EfCourseRepositoryTests
         var byId = new EfCourseRepository(context).ListAll().ToDictionary(c => c.Id);
 
         Assert.Equal(
-            new Course("pc", "Título", BnccAxis.PensamentoComputacional, "Resumo", "Professores", 40),
+            new Course("pc", "Título", BnccAxis.PensamentoComputacional, "Resumo", "Professores", 40) { DisplayOrder = 10 },
             byId["pc"]);
         Assert.Equal(BnccAxis.MundoDigital, byId["md"].Axis);
         Assert.Null(byId["md"].WorkloadHours);
+    }
+
+    [Fact]
+    public void Update_WithNullSortOrder_KeepsStoredOrder_AndFindReturnsIt()
+    {
+        using var context = CreateContext(nameof(Update_WithNullSortOrder_KeepsStoredOrder_AndFindReturnsIt));
+        AddCourse(context, new Course("pc", "PC", BnccAxis.PensamentoComputacional, "s", "a"), 7);
+        context.SaveChanges();
+        context.ChangeTracker.Clear();
+        var sut = new EfCourseRepository(context);
+
+        Assert.True(sut.Update(new Course("pc", "Editado", BnccAxis.MundoDigital, "s", "a"), null));
+        context.ChangeTracker.Clear();
+        Assert.Equal(7, sut.Find("pc")!.DisplayOrder);
+        Assert.Equal("Editado", sut.Find("pc")!.Title);
+
+        Assert.True(sut.Update(new Course("pc", "Editado", BnccAxis.MundoDigital, "s", "a"), 3));
+        context.ChangeTracker.Clear();
+        Assert.Equal(3, sut.Find("pc")!.DisplayOrder);
+        Assert.Null(sut.Find("nao-tem"));
     }
 
     [Fact]
