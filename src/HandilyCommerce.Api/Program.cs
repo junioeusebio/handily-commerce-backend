@@ -5,6 +5,7 @@ using HandilyCommerce.Api.Courses;
 using HandilyCommerce.Api.Observability;
 using HandilyCommerce.Api.OpenApi;
 using HandilyCommerce.Api.Options;
+using HandilyCommerce.Api.RateLimiting;
 using HandilyCommerce.Api.Versioning;
 using HandilyCommerce.Application.DependencyInjection;
 using HandilyCommerce.Domain.ApiVersion;
@@ -118,6 +119,7 @@ builder.Services.AddOpenApi(options =>
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddJwtAuth(builder.Configuration);
+builder.Services.AddLeadRateLimiting(builder.Configuration);
 
 var app = builder.Build();
 
@@ -176,6 +178,9 @@ if (app.Environment.IsDevelopment())
 
 // CORS before Map* so GitHub Pages (and local Angular) can call the API.
 app.UseCors();
+
+// Rate limit: only endpoints with RequireRateLimiting (POST leads). After forwarded headers → real client IP.
+app.UseRateLimiter();
 
 // Bearer JWT: only endpoints with RequireAuthorization() are protected; the rest stay public.
 app.UseAuthentication();
@@ -239,7 +244,9 @@ app.MapPost(leadsPath, (CreateLeadCommand command, ILeadPort leadPort) =>
     .WithSummary("Registra um contato (lead) do Fale conosco (nome, e-mail, telefone BR, município)")
     .Accepts<CreateLeadCommand>("application/json")
     .Produces(StatusCodes.Status201Created)
-    .ProducesValidationProblem();
+    .ProducesValidationProblem()
+    .Produces(StatusCodes.Status429TooManyRequests)
+    .RequireRateLimiting(LeadRateLimiting.PolicyName);
 
 // Auth stub (C1): admin from Auth__* env; GET auth/me proves the bearer guard.
 app.MapAuthEndpoints(loginPath, mePath);
