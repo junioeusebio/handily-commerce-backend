@@ -6,20 +6,29 @@ using Microsoft.Extensions.Logging;
 namespace HandilyCommerce.Infrastructure.Notifications;
 
 /// <summary>
-/// Background consumer: one DI scope (fresh DbContext) per lead → <see cref="LeadNotificationService"/>.
+/// Background sender: on each signal (new lead) or every <c>LeadNotification:PollIntervalSeconds</c>, claims due
+/// Pending/Retrying rows from <c>EmailSendLogs</c> (one DI scope per batch) via <see cref="LeadNotificationService"/>.
+/// Rows left behind by a restart are picked up on startup.
 /// </summary>
 public sealed partial class LeadNotificationWorker(
-    LeadNotificationQueue queue,
+    LeadNotificationSignal signal,
+    LeadNotificationOptions options,
     IServiceScopeFactory scopeFactory,
     ILogger<LeadNotificationWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var interval = TimeSpan.FromSeconds(Math.Max(1, options.PollIntervalSeconds));
         try
         {
-            await foreach (var lead in queue.Reader.ReadAllAsync(stoppingToken))
+            while (!stoppingToken.IsCancellationRequested)
             {
-                await ProcessAsync(lead, stoppingToken);
+                while (await ProcessBatchAsync(stoppingToken) > 0)
+                {
+                    // Drain everything that is due.
+                }
+
+                await signal.WaitAsync(interval, stoppingToken);
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -28,24 +37,30 @@ public sealed partial class LeadNotificationWorker(
         }
     }
 
-    internal async Task ProcessAsync(Domain.Leads.Lead lead, CancellationToken cancellationToken)
+    internal async Task<int> ProcessBatchAsync(CancellationToken cancellationToken)
     {
         try
         {
             await using var scope = scopeFactory.CreateAsyncScope();
             var service = scope.ServiceProvider.GetRequiredService<LeadNotificationService>();
-            var log = await service.NotifyAsync(lead, cancellationToken);
-            LogResult(lead.Id, log.Status.ToString());
+            var count = await service.ProcessDueAsync(cancellationToken);
+            if (count > 0)
+            {
+                LogBatch(count);
+            }
+
+            return count;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            LogError(ex, lead.Id);
+            LogError(ex);
+            return 0;
         }
     }
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Lead {LeadId} notification: {Status}")]
-    private partial void LogResult(Guid leadId, string status);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Lead notifications processed: {Count}")]
+    private partial void LogBatch(int count);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Lead {LeadId} notification could not be processed")]
-    private partial void LogError(Exception exception, Guid leadId);
+    [LoggerMessage(Level = LogLevel.Error, Message = "Lead notification batch could not be processed")]
+    private partial void LogError(Exception exception);
 }

@@ -36,7 +36,9 @@ public sealed class ResendEmailSender(HttpClient httpClient, ResendOptions optio
         if (!response.IsSuccessStatusCode)
         {
             var snippet = body.Length > MaxBodyInError ? body[..MaxBodyInError] : body;
-            return EmailSendResult.Failed($"HTTP {(int)response.StatusCode}: {snippet}");
+            var code = (int)response.StatusCode;
+            // 429 and 5xx are transient; other 4xx (bad request, invalid key, …) are final.
+            return EmailSendResult.Failed($"HTTP {code}: {snippet}", retryable: code == 429 || code >= 500);
         }
 
         return EmailSendResult.Sent(TryReadId(body));

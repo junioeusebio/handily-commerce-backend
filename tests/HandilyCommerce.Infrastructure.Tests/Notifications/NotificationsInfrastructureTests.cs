@@ -3,6 +3,7 @@ using System.Text.Json;
 using HandilyCommerce.Application.Leads;
 using HandilyCommerce.Domain.Leads;
 using HandilyCommerce.Domain.Notifications;
+using HandilyCommerce.Infrastructure.Leads;
 using HandilyCommerce.Infrastructure.Notifications;
 using HandilyCommerce.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -90,47 +91,173 @@ public class NotificationsInfrastructureTests
         Assert.Equal(log, Assert.Single(read.EmailSendLogs.AsNoTracking()));
     }
 
-    [Fact]
-    public async Task Worker_ProcessesQueuedLead_AndLogsAttempt()
+    [Theory]
+    [InlineData(HttpStatusCode.TooManyRequests, true)]
+    [InlineData(HttpStatusCode.InternalServerError, true)]
+    [InlineData(HttpStatusCode.ServiceUnavailable, true)]
+    [InlineData(HttpStatusCode.BadRequest, false)]
+    [InlineData(HttpStatusCode.Unauthorized, false)]
+    public async Task Resend_ErrorStatus_RetryableOnlyFor429And5xx(HttpStatusCode status, bool retryable)
     {
-        var dbName = Guid.NewGuid().ToString();
+        var result = await Sender(new StubHandler(status, "err")).SendAsync(Message, CancellationToken.None);
+
+        Assert.Equal(EmailSendStatus.Failed, result.Status);
+        Assert.Equal(retryable, result.Retryable);
+    }
+
+    private static ServiceProvider BuildProvider(string dbName, HttpStatusCode status, string body = """{"id":"m1"}""")
+    {
         var services = new ServiceCollection();
         services.AddDbContext<HandilyCommerceDbContext>(o => o.UseInMemoryDatabase(dbName));
         services.AddScoped<IEmailSendLogRepository, EfEmailSendLogRepository>();
-        services.AddSingleton<IEmailSender>(Sender(new StubHandler(HttpStatusCode.OK, """{"id":"m1"}""")));
-        services.AddSingleton(new LeadNotificationOptions());
+        services.AddScoped<ILeadRepository, EfLeadRepository>();
+        services.AddScoped<ILeadNotificationQueue, LeadNotificationQueue>();
+        services.AddSingleton<IEmailSender>(Sender(new StubHandler(status, body)));
+        services.AddSingleton(new LeadNotificationOptions { PollIntervalSeconds = 1, BaseDelaySeconds = 60 });
         services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<LeadNotificationSignal>();
         services.AddScoped<LeadNotificationService>();
-        await using var provider = services.BuildServiceProvider();
+        return services.BuildServiceProvider();
+    }
 
-        var queue = new LeadNotificationQueue();
-        var worker = new LeadNotificationWorker(queue, provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<LeadNotificationWorker>.Instance);
-        var lead = new Lead(Guid.NewGuid(), "Ana", "ana@x.com", "Recife", null, DateTimeOffset.UtcNow);
+    private static LeadNotificationWorker Worker(ServiceProvider provider) => new(
+        provider.GetRequiredService<LeadNotificationSignal>(),
+        provider.GetRequiredService<LeadNotificationOptions>(),
+        provider.GetRequiredService<IServiceScopeFactory>(),
+        NullLogger<LeadNotificationWorker>.Instance);
 
-        await worker.StartAsync(CancellationToken.None);
-        queue.Enqueue(lead);
-        EmailSendLog? stored = null;
-        for (var i = 0; i < 50 && stored is null; i++)
+    private static Lead NewLead() => new(Guid.NewGuid(), "Ana", "ana@x.com", "Recife", null, DateTimeOffset.UtcNow, Phone: "11912345678");
+
+    private static async Task<EmailSendLog?> WaitForAsync(ServiceProvider provider, Func<EmailSendLog, bool> predicate)
+    {
+        for (var i = 0; i < 100; i++)
         {
-            await Task.Delay(50);
             using var scope = provider.CreateScope();
-            stored = scope.ServiceProvider.GetRequiredService<HandilyCommerceDbContext>().EmailSendLogs.AsNoTracking().SingleOrDefault();
+            var row = scope.ServiceProvider.GetRequiredService<HandilyCommerceDbContext>().EmailSendLogs.AsNoTracking().SingleOrDefault();
+            if (row is not null && predicate(row))
+            {
+                return row;
+            }
+
+            await Task.Delay(50);
         }
 
-        await worker.StopAsync(CancellationToken.None);
-        Assert.NotNull(stored);
-        Assert.Equal(lead.Id, stored.LeadId);
-        Assert.Equal(EmailSendStatus.Sent, stored.Status);
+        return null;
     }
 
     [Fact]
-    public async Task Worker_ProcessFailure_IsSwallowed()
+    public async Task Queue_PersistsPendingRow_AndWorkerSendsIt()
     {
-        await using var provider = new ServiceCollection().BuildServiceProvider();
-        var worker = new LeadNotificationWorker(new LeadNotificationQueue(), provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<LeadNotificationWorker>.Instance);
+        await using var provider = BuildProvider(Guid.NewGuid().ToString(), HttpStatusCode.OK);
+        var worker = Worker(provider);
+        var lead = NewLead();
+        await worker.StartAsync(CancellationToken.None);
 
-        await worker.ProcessAsync(new Lead(Guid.NewGuid(), "A", "a@x.com", "R", null, DateTimeOffset.UtcNow), CancellationToken.None);
-        Assert.Throws<ArgumentNullException>(() => new LeadNotificationQueue().Enqueue(null!));
+        using (var scope = provider.CreateScope())
+        {
+            scope.ServiceProvider.GetRequiredService<ILeadRepository>().Add(lead);
+            scope.ServiceProvider.GetRequiredService<ILeadNotificationQueue>().Enqueue(lead);
+        }
+
+        var stored = await WaitForAsync(provider, r => r.Status == EmailSendStatus.Sent);
+        await worker.StopAsync(CancellationToken.None);
+
+        Assert.NotNull(stored);
+        Assert.Equal(lead.Id, stored.LeadId);
+        Assert.Equal("m1", stored.ProviderMessageId);
+        Assert.Equal(1, stored.AttemptCount);
+    }
+
+    [Fact]
+    public async Task Worker_OnStartup_RecoversPendingRowLeftByRestart()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var lead = NewLead();
+        await using (var before = BuildProvider(dbName, HttpStatusCode.OK))
+        {
+            // "Previous instance": lead + Pending row saved, process died before sending.
+            using var scope = before.CreateScope();
+            scope.ServiceProvider.GetRequiredService<ILeadRepository>().Add(lead);
+            scope.ServiceProvider.GetRequiredService<ILeadNotificationQueue>().Enqueue(lead);
+        }
+
+        await using var provider = BuildProvider(dbName, HttpStatusCode.OK);
+        var worker = Worker(provider);
+        await worker.StartAsync(CancellationToken.None);
+        var stored = await WaitForAsync(provider, r => r.Status == EmailSendStatus.Sent);
+        await worker.StopAsync(CancellationToken.None);
+
+        Assert.NotNull(stored);
+        Assert.Equal(lead.Id, stored.LeadId);
+    }
+
+    [Fact]
+    public async Task Worker_TransientFailure_SchedulesRetry()
+    {
+        await using var provider = BuildProvider(Guid.NewGuid().ToString(), HttpStatusCode.ServiceUnavailable, "down");
+        var lead = NewLead();
+        using (var scope = provider.CreateScope())
+        {
+            scope.ServiceProvider.GetRequiredService<ILeadRepository>().Add(lead);
+            scope.ServiceProvider.GetRequiredService<ILeadNotificationQueue>().Enqueue(lead);
+        }
+
+        Assert.Equal(1, await Worker(provider).ProcessBatchAsync(CancellationToken.None));
+        Assert.Equal(0, await Worker(provider).ProcessBatchAsync(CancellationToken.None));
+
+        var stored = await WaitForAsync(provider, _ => true);
+        Assert.Equal(EmailSendStatus.Retrying, stored!.Status);
+        Assert.True(stored.NextAttemptAtUtc > DateTimeOffset.UtcNow.AddSeconds(30));
+    }
+
+    [Fact]
+    public async Task EfRepository_Claim_LeasesDueOpenRowsOnly_SoSecondClaimGetsNothing()
+    {
+        var options = new DbContextOptionsBuilder<HandilyCommerceDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        var now = new DateTimeOffset(2026, 10, 30, 12, 0, 0, TimeSpan.Zero);
+        var due = new EmailSendLog(Guid.NewGuid(), Guid.NewGuid(), "a", "s", "R", null, EmailSendStatus.Pending, null, now, 0, now);
+        var later = due with { Id = Guid.NewGuid(), Status = EmailSendStatus.Retrying, NextAttemptAtUtc = now.AddMinutes(1) };
+        var sent = due with { Id = Guid.NewGuid(), Status = EmailSendStatus.Sent, NextAttemptAtUtc = null };
+        await using var ctx = new HandilyCommerceDbContext(options);
+        var repo = new EfEmailSendLogRepository(ctx);
+        foreach (var l in new[] { due, later, sent })
+        {
+            await repo.AddAsync(l, CancellationToken.None);
+        }
+
+        var claimed = Assert.Single(await repo.ClaimDueAsync(now, now.AddMinutes(5), 10, CancellationToken.None));
+        Assert.Equal(due.Id, claimed.Id);
+        Assert.Equal(now.AddMinutes(5), claimed.NextAttemptAtUtc);
+        Assert.Empty(await repo.ClaimDueAsync(now, now.AddMinutes(5), 10, CancellationToken.None));
+
+        await repo.UpdateAsync(claimed with { Status = EmailSendStatus.Sent, NextAttemptAtUtc = null }, CancellationToken.None);
+        Assert.Equal(EmailSendStatus.Sent, ctx.EmailSendLogs.AsNoTracking().Single(l => l.Id == due.Id).Status);
+        Assert.Empty(await repo.ClaimDueAsync(now.AddDays(1), now.AddDays(2), 10, CancellationToken.None).ContinueWith(t => t.Result.Where(l => l.Id != later.Id).ToList()));
+    }
+
+    [Fact]
+    public async Task Signal_WaitReturnsOnNotify_OrTimeout()
+    {
+        var signal = new LeadNotificationSignal();
+        signal.Notify();
+        signal.Notify(); // Coalesced.
+        await signal.WaitAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
+        await signal.WaitAsync(TimeSpan.FromMilliseconds(20), CancellationToken.None);
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => signal.WaitAsync(TimeSpan.FromSeconds(10), cts.Token));
+    }
+
+    [Fact]
+    public async Task Worker_BatchFailure_IsSwallowed()
+    {
+        await using var provider = new ServiceCollection().AddSingleton<LeadNotificationSignal>()
+            .AddSingleton(new LeadNotificationOptions()).BuildServiceProvider();
+
+        Assert.Equal(0, await Worker(provider).ProcessBatchAsync(CancellationToken.None));
+        await using var db = BuildProvider(Guid.NewGuid().ToString(), HttpStatusCode.OK);
+        using var scope = db.CreateScope();
+        Assert.Throws<ArgumentNullException>(() => scope.ServiceProvider.GetRequiredService<ILeadNotificationQueue>().Enqueue(null!));
     }
 
     private sealed class StubHandler(HttpStatusCode status, string body) : HttpMessageHandler
