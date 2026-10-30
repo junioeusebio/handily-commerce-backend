@@ -1,25 +1,38 @@
-# Dependabot: NuGet + GitHub Actions (semanal).
+# Dependabot: NuGet + GitHub Actions (semanal, segunda 06:00 BRT).
+# Agrupado: 1 PR por ecossistema (majors NuGet em PR separado, 1 por pacote cobrindo todas as pastas).
 # Label "Release Patch" satisfaz o check require-release-label (pr-release-label.yml).
 # Obs.: PRs do Dependabot não fazem bump em Directory.Build.props; o bump entra no próximo PR de release.
 version: 2
 updates:
   - package-ecosystem: nuget
-    directory: "/"
+    directories:
+      - "/"
+      - "/src/*"
+      - "/tests/*"
     schedule:
       interval: weekly
       day: monday
       time: "06:00"
       timezone: America/Sao_Paulo
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     labels:
       - "Release Patch"
     commit-message:
       prefix: "chore(deps)"
     groups:
       nuget-minor-patch:
+        group-by: dependency-name
+        patterns:
+          - "*"
         update-types:
           - minor
           - patch
+      nuget-major:
+        group-by: dependency-name
+        patterns:
+          - "*"
+        update-types:
+          - major
 
   - package-ecosystem: github-actions
     directory: "/"
@@ -28,7 +41,12 @@ updates:
       day: monday
       time: "06:00"
       timezone: America/Sao_Paulo
+    open-pull-requests-limit: 3
     labels:
       - "Release Patch"
     commit-message:
       prefix: "chore(ci)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
