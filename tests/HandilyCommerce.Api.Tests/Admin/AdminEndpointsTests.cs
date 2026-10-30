@@ -32,19 +32,7 @@ public class AdminEndpointsTests(WebApplicationFactory<Program> factory)
             builder.UseSetting("Auth:AdminEmail", Email);
             builder.UseSetting("Auth:AdminPasswordHash", Hash);
             builder.UseSetting("Auth:JwtKey", "chave-de-teste-com-pelo-menos-32-bytes!!");
-            builder.ConfigureTestServices(services =>
-            {
-                var npgsql = services
-                    .Where(d => d.ServiceType.IsGenericType
-                        && d.ServiceType.GenericTypeArguments.Contains(typeof(HandilyCommerceDbContext)))
-                    .ToList();
-                foreach (var descriptor in npgsql)
-                {
-                    services.Remove(descriptor);
-                }
-
-                services.AddDbContext<HandilyCommerceDbContext>(o => o.UseInMemoryDatabase(database));
-            });
+            builder.ConfigureTestServices(services => InMemoryDb.Use(services, database));
         });
         return (app.CreateClient(), app.Services);
     }
