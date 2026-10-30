@@ -20,7 +20,11 @@ public static class EmailSendLogModel
         entity.Property(e => e.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
         entity.Property(e => e.ErrorMessage).HasMaxLength(1000);
         entity.Property(e => e.AttemptedAtUtc).IsRequired();
+        entity.Property(e => e.AttemptCount).IsRequired();
+        entity.Property(e => e.NextAttemptAtUtc);
+        entity.Ignore(e => e.IsOpen);
         entity.HasIndex(e => e.LeadId);
+        entity.HasIndex(e => new { e.Status, e.NextAttemptAtUtc });
         entity.HasIndex(e => e.AttemptedAtUtc);
     }
 }

@@ -17,7 +17,7 @@ namespace HandilyCommerce.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.4")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -152,6 +152,9 @@ namespace HandilyCommerce.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset>("AttemptedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -161,6 +164,9 @@ namespace HandilyCommerce.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("LeadId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Provider")
                         .IsRequired()
@@ -191,6 +197,8 @@ namespace HandilyCommerce.Infrastructure.Persistence.Migrations
                     b.HasIndex("AttemptedAtUtc");
 
                     b.HasIndex("LeadId");
+
+                    b.HasIndex("Status", "NextAttemptAtUtc");
 
                     b.ToTable("EmailSendLogs", (string)null);
                 });

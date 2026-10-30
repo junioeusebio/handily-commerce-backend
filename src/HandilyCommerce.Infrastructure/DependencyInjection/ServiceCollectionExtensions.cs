@@ -56,8 +56,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(leadNotification);
         services.AddHttpClient<IEmailSender, ResendEmailSender>(client => client.Timeout = TimeSpan.FromSeconds(15));
         services.AddScoped<IEmailSendLogRepository, EfEmailSendLogRepository>();
-        services.AddSingleton<LeadNotificationQueue>();
-        services.AddSingleton<ILeadNotificationQueue>(sp => sp.GetRequiredService<LeadNotificationQueue>());
+        services.AddSingleton<LeadNotificationSignal>();
+        services.AddScoped<ILeadNotificationQueue, LeadNotificationQueue>();
         services.AddHostedService<LeadNotificationWorker>();
     }
 

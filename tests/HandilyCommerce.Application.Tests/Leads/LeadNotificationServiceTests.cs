@@ -1,4 +1,5 @@
 using HandilyCommerce.Application.Leads;
+using HandilyCommerce.Application.Tests.Fakes;
 using HandilyCommerce.Domain.Leads;
 using HandilyCommerce.Domain.Notifications;
 
@@ -9,63 +10,198 @@ public class LeadNotificationServiceTests
     private static readonly DateTimeOffset Now = new(2026, 10, 23, 18, 0, 0, TimeSpan.Zero);
     private static readonly Lead Lead = new(Guid.NewGuid(), "Ana <b>", "ana@x.com", "Recife & Olinda", null, Now);
 
-    private static (LeadNotificationService Sut, FakeLogRepository Logs) Create(IEmailSender sender)
+    private sealed class Ctx
     {
-        var logs = new FakeLogRepository();
-        return (new LeadNotificationService(sender, logs, new LeadNotificationOptions(), new FixedTimeProvider(Now)), logs);
+        public FakeSender Sender { get; init; } = null!;
+        public FakeLogRepository Logs { get; } = new();
+        public InMemoryLeadRepository Leads { get; } = new();
+        public MutableTimeProvider Clock { get; } = new(Now);
+        public LeadNotificationOptions Options { get; } = new() { MaxAttempts = 3, BaseDelaySeconds = 10 };
+
+        public LeadNotificationService Sut => new(Sender, Logs, Leads, Options, Clock);
+
+        public EmailSendLog Seed()
+        {
+            Leads.Add(Lead);
+            var pending = LeadNotificationService.NewPending(Lead, Options, Sender.Provider, Clock.GetUtcNow());
+            Logs.Logs.Add(pending);
+            return pending;
+        }
     }
 
+    private static Ctx Create(Func<EmailMessage, EmailSendResult> send) => new() { Sender = new FakeSender(send) };
+
     [Fact]
-    public async Task NotifyAsync_Sent_LogsSuccessWithDefaults()
+    public void NewPending_HasZeroAttempts_AndIsDueNow()
     {
-        var sender = new FakeSender(_ => EmailSendResult.Sent("msg-1"));
-        var (sut, logs) = Create(sender);
+        var log = LeadNotificationService.NewPending(Lead, new LeadNotificationOptions(), "Fake", Now);
 
-        var log = await sut.NotifyAsync(Lead, CancellationToken.None);
-
-        Assert.Same(log, Assert.Single(logs.Logs));
-        Assert.Equal(EmailSendStatus.Sent, log.Status);
-        Assert.Equal("msg-1", log.ProviderMessageId);
+        Assert.Equal(EmailSendStatus.Pending, log.Status);
+        Assert.Equal(0, log.AttemptCount);
+        Assert.Equal(Now, log.NextAttemptAtUtc);
         Assert.Equal(Lead.Id, log.LeadId);
         Assert.Equal("ajksys@protonmail.com", log.ToAddress);
         Assert.Equal("[NOVO CONTATO] - Lead BCC", log.Subject);
-        Assert.Equal("Fake", log.Provider);
-        Assert.Equal(Now, log.AttemptedAtUtc);
-        Assert.Null(log.ErrorMessage);
-        Assert.Equal("ajksys@protonmail.com", sender.Last!.To);
-        Assert.Contains("Ana &lt;b&gt;", sender.Last.HtmlBody);
+        Assert.True(log.IsOpen);
+        Assert.Throws<ArgumentNullException>(() => LeadNotificationService.NewPending(null!, new LeadNotificationOptions(), "F", Now));
+        Assert.Throws<ArgumentNullException>(() => LeadNotificationService.NewPending(Lead, null!, "F", Now));
     }
 
     [Fact]
-    public async Task NotifyAsync_SenderThrows_LogsTruncatedFailure()
+    public async Task ProcessDue_Success_MarksSentWithDefaults()
     {
-        var (sut, logs) = Create(new FakeSender(_ => throw new HttpRequestException(new string('x', 2000))));
+        var ctx = Create(_ => EmailSendResult.Sent("msg-1"));
+        ctx.Seed();
 
-        var log = await sut.NotifyAsync(Lead, CancellationToken.None);
+        Assert.Equal(1, await ctx.Sut.ProcessDueAsync(CancellationToken.None));
 
+        var log = Assert.Single(ctx.Logs.Logs);
+        Assert.Equal(EmailSendStatus.Sent, log.Status);
+        Assert.Equal("msg-1", log.ProviderMessageId);
+        Assert.Equal(1, log.AttemptCount);
+        Assert.Null(log.NextAttemptAtUtc);
+        Assert.Null(log.ErrorMessage);
+        Assert.Equal("ajksys@protonmail.com", ctx.Sender.Last!.To);
+        Assert.Contains("Ana &lt;b&gt;", ctx.Sender.Last.HtmlBody);
+    }
+
+    [Fact]
+    public async Task ProcessDue_TransientFailures_RetryWithExponentialBackoff_ThenGiveUp()
+    {
+        var ctx = Create(_ => EmailSendResult.Failed("HTTP 503: down", retryable: true));
+        ctx.Seed();
+
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+        var first = Assert.Single(ctx.Logs.Logs);
+        Assert.Equal(EmailSendStatus.Retrying, first.Status);
+        Assert.Equal(1, first.AttemptCount);
+        Assert.Equal(Now.AddSeconds(10), first.NextAttemptAtUtc);
+
+        // Not due yet → nothing claimed, nothing sent.
+        Assert.Equal(0, await ctx.Sut.ProcessDueAsync(CancellationToken.None));
+        Assert.Equal(1, ctx.Sender.Calls);
+
+        ctx.Clock.Now = Now.AddSeconds(10);
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+        var second = Assert.Single(ctx.Logs.Logs);
+        Assert.Equal(EmailSendStatus.Retrying, second.Status);
+        Assert.Equal(2, second.AttemptCount);
+        Assert.Equal(ctx.Clock.Now.AddSeconds(20), second.NextAttemptAtUtc);
+
+        ctx.Clock.Now = ctx.Clock.Now.AddSeconds(20);
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+        var last = Assert.Single(ctx.Logs.Logs);
+        Assert.Equal(EmailSendStatus.GivenUp, last.Status);
+        Assert.Equal(3, last.AttemptCount);
+        Assert.Null(last.NextAttemptAtUtc);
+        Assert.Equal("HTTP 503: down", last.ErrorMessage);
+
+        ctx.Clock.Now = ctx.Clock.Now.AddDays(1);
+        Assert.Equal(0, await ctx.Sut.ProcessDueAsync(CancellationToken.None));
+        Assert.Equal(3, ctx.Sender.Calls);
+    }
+
+    [Fact]
+    public async Task ProcessDue_RetryThenSuccess_SendsExactlyOnce()
+    {
+        var calls = 0;
+        var ctx = Create(_ => ++calls == 1 ? EmailSendResult.Failed("HTTP 429: slow down", retryable: true) : EmailSendResult.Sent("ok"));
+        ctx.Seed();
+
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+        ctx.Clock.Now = Now.AddMinutes(5);
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+        ctx.Clock.Now = Now.AddHours(5);
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+
+        var log = Assert.Single(ctx.Logs.Logs);
+        Assert.Equal(EmailSendStatus.Sent, log.Status);
+        Assert.Equal(2, log.AttemptCount);
+        Assert.Equal(2, calls);
+    }
+
+    [Fact]
+    public async Task ProcessDue_NonRetryable4xx_IsFinalFailed()
+    {
+        var ctx = Create(_ => EmailSendResult.Failed("HTTP 422: invalid"));
+        ctx.Seed();
+
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+        ctx.Clock.Now = Now.AddDays(1);
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+
+        var log = Assert.Single(ctx.Logs.Logs);
         Assert.Equal(EmailSendStatus.Failed, log.Status);
+        Assert.Null(log.NextAttemptAtUtc);
+        Assert.Equal(1, ctx.Sender.Calls);
+    }
+
+    [Fact]
+    public async Task ProcessDue_SenderThrows_IsRetryable_AndTruncated()
+    {
+        var ctx = Create(_ => throw new HttpRequestException(new string('x', 2000)));
+        ctx.Seed();
+
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+
+        var log = Assert.Single(ctx.Logs.Logs);
+        Assert.Equal(EmailSendStatus.Retrying, log.Status);
         Assert.StartsWith("HttpRequestException: ", log.ErrorMessage);
         Assert.Equal(LeadNotificationService.ErrorMaxLength, log.ErrorMessage!.Length);
-        Assert.Single(logs.Logs);
     }
 
     [Fact]
-    public async Task NotifyAsync_Skipped_LogsSkipped()
+    public async Task ProcessDue_Skipped_IsFinal()
     {
-        var (sut, _) = Create(new FakeSender(_ => EmailSendResult.Skipped("no key")));
+        var ctx = Create(_ => EmailSendResult.Skipped("no key"));
+        ctx.Seed();
 
-        var log = await sut.NotifyAsync(Lead, CancellationToken.None);
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
 
+        var log = Assert.Single(ctx.Logs.Logs);
         Assert.Equal(EmailSendStatus.Skipped, log.Status);
         Assert.Equal("no key", log.ErrorMessage);
+        Assert.Null(log.NextAttemptAtUtc);
     }
 
     [Fact]
-    public async Task NotifyAsync_NullLead_Throws()
+    public async Task ProcessDue_MissingLead_FailsWithoutSending()
     {
-        var (sut, _) = Create(new FakeSender(_ => EmailSendResult.Sent(null)));
+        var ctx = Create(_ => EmailSendResult.Sent("x"));
+        ctx.Logs.Logs.Add(LeadNotificationService.NewPending(Lead, ctx.Options, "Fake", Now));
+        ctx.Logs.Logs.Add(LeadNotificationService.NewPending(Lead, ctx.Options, "Fake", Now) with { LeadId = null });
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sut.NotifyAsync(null!, CancellationToken.None));
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+
+        Assert.All(ctx.Logs.Logs, l => Assert.Equal(EmailSendStatus.Failed, l.Status));
+        Assert.Equal(0, ctx.Sender.Calls);
+    }
+
+    [Theory]
+    [InlineData(EmailSendStatus.Sent)]
+    [InlineData(EmailSendStatus.Failed)]
+    [InlineData(EmailSendStatus.Skipped)]
+    [InlineData(EmailSendStatus.GivenUp)]
+    public async Task Attempt_FinalRow_IsNeverSentAgain(EmailSendStatus status)
+    {
+        var ctx = Create(_ => EmailSendResult.Sent("x"));
+        var row = ctx.Seed() with { Status = status };
+
+        var result = await ctx.Sut.AttemptAsync(row, CancellationToken.None);
+
+        Assert.Same(row, result);
+        Assert.Equal(0, ctx.Sender.Calls);
+    }
+
+    [Fact]
+    public void BackoffDelay_IsExponential_AndCapped()
+    {
+        var ctx = Create(_ => EmailSendResult.Sent(null));
+        ctx.Options.MaxDelaySeconds = 100;
+
+        Assert.Equal(TimeSpan.FromSeconds(10), ctx.Sut.BackoffDelay(1));
+        Assert.Equal(TimeSpan.FromSeconds(40), ctx.Sut.BackoffDelay(3));
+        Assert.Equal(TimeSpan.FromSeconds(100), ctx.Sut.BackoffDelay(10));
     }
 
     [Fact]
@@ -110,11 +246,14 @@ public class LeadNotificationServiceTests
     {
         public EmailMessage? Last { get; private set; }
 
+        public int Calls { get; private set; }
+
         public string Provider => "Fake";
 
         public Task<EmailSendResult> SendAsync(EmailMessage message, CancellationToken cancellationToken)
         {
             Last = message;
+            Calls++;
             return Task.FromResult(send(message));
         }
     }
@@ -128,10 +267,31 @@ public class LeadNotificationServiceTests
             Logs.Add(log);
             return Task.CompletedTask;
         }
+
+        public Task<IReadOnlyList<EmailSendLog>> ClaimDueAsync(
+            DateTimeOffset now, DateTimeOffset leaseUntil, int max, CancellationToken cancellationToken)
+        {
+            var due = Logs.Where(l => l.IsOpen && l.NextAttemptAtUtc <= now).Take(max).ToList();
+            var claimed = due.Select(l => l with { NextAttemptAtUtc = leaseUntil }).ToList();
+            foreach (var c in claimed)
+            {
+                Logs[Logs.FindIndex(l => l.Id == c.Id)] = c;
+            }
+
+            return Task.FromResult<IReadOnlyList<EmailSendLog>>(claimed);
+        }
+
+        public Task UpdateAsync(EmailSendLog log, CancellationToken cancellationToken)
+        {
+            Logs[Logs.FindIndex(l => l.Id == log.Id)] = log;
+            return Task.CompletedTask;
+        }
     }
 
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    private sealed class MutableTimeProvider(DateTimeOffset now) : TimeProvider
     {
-        public override DateTimeOffset GetUtcNow() => now;
+        public DateTimeOffset Now { get; set; } = now;
+
+        public override DateTimeOffset GetUtcNow() => Now;
     }
 }

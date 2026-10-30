@@ -1,19 +1,26 @@
-using System.Threading.Channels;
+using HandilyCommerce.Application.Leads;
 using HandilyCommerce.Domain.Leads;
+using HandilyCommerce.Domain.Notifications;
+using HandilyCommerce.Infrastructure.Persistence;
 
 namespace HandilyCommerce.Infrastructure.Notifications;
 
-/// <summary>In-memory queue (singleton) between <c>POST /leads</c> and <see cref="LeadNotificationWorker"/>.</summary>
-public sealed class LeadNotificationQueue : ILeadNotificationQueue
+/// <summary>
+/// Durable queue (scoped, same DbContext as the request): stores a <see cref="EmailSendStatus.Pending"/> row in
+/// <c>EmailSendLogs</c> and wakes <see cref="LeadNotificationWorker"/>. A restart never loses the e-mail.
+/// </summary>
+public sealed class LeadNotificationQueue(
+    HandilyCommerceDbContext dbContext,
+    LeadNotificationOptions options,
+    IEmailSender sender,
+    TimeProvider timeProvider,
+    LeadNotificationSignal signal) : ILeadNotificationQueue
 {
-    private readonly Channel<Lead> channel = Channel.CreateUnbounded<Lead>(
-        new UnboundedChannelOptions { SingleReader = true });
-
-    public ChannelReader<Lead> Reader => channel.Reader;
-
     public void Enqueue(Lead lead)
     {
         ArgumentNullException.ThrowIfNull(lead);
-        channel.Writer.TryWrite(lead);
+        dbContext.EmailSendLogs.Add(LeadNotificationService.NewPending(lead, options, sender.Provider, timeProvider.GetUtcNow()));
+        dbContext.SaveChanges();
+        signal.Notify();
     }
 }

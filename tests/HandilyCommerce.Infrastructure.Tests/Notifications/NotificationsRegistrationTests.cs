@@ -21,6 +21,7 @@ public class NotificationsRegistrationTests
             ["Resend:ApiKey"] = "k",
             ["Resend:From"] = "Leads <leads@example.com>",
             ["LeadNotification:To"] = "dest@example.com",
+            ["LeadNotification:MaxAttempts"] = "7",
         }).Build();
         var services = new ServiceCollection();
         services.AddLogging();
@@ -33,11 +34,14 @@ public class NotificationsRegistrationTests
         Assert.IsType<ResendEmailSender>(scope.ServiceProvider.GetRequiredService<IEmailSender>());
         Assert.IsType<EfEmailSendLogRepository>(scope.ServiceProvider.GetRequiredService<IEmailSendLogRepository>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<LeadNotificationService>());
-        Assert.Same(provider.GetRequiredService<LeadNotificationQueue>(), provider.GetRequiredService<ILeadNotificationQueue>());
+        Assert.IsType<LeadNotificationQueue>(scope.ServiceProvider.GetRequiredService<ILeadNotificationQueue>());
+        Assert.Same(provider.GetRequiredService<LeadNotificationSignal>(), provider.GetRequiredService<LeadNotificationSignal>());
         Assert.Contains(provider.GetServices<IHostedService>(), s => s is LeadNotificationWorker);
         Assert.Equal("Leads <leads@example.com>", provider.GetRequiredService<ResendOptions>().From);
         var options = provider.GetRequiredService<LeadNotificationOptions>();
         Assert.Equal("dest@example.com", options.To);
         Assert.Equal(LeadNotificationOptions.DefaultSubject, options.Subject);
+        Assert.Equal(7, options.MaxAttempts);
+        Assert.Equal(30, options.BaseDelaySeconds);
     }
 }
