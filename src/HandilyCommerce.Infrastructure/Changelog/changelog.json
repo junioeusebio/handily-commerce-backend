@@ -1,5 +1,14 @@
 [
   {
+    "id": "29e62096-d1cf-44de-847e-4a712d6d62fe",
+    "title": "feat(auth): sessão do admin com refresh token em cookie HttpOnly (0.15.0)",
+    "summary": "## O que muda Sessão do admin que sobrevive ao F5: além do access token (JWT, igual a antes), o login passa a abrir uma sessão renovável num cookie HttpOnly.",
+    "productVersion": "0.15.0",
+    "mergedAt": "2026-10-30T21:36:17Z",
+    "prNumber": 60,
+    "label": "Release Mirror"
+  },
+  {
     "id": "a10c0000-0011-4000-8000-00000000000b",
     "title": "feat: changelog API for Major/Mirror releases",
     "summary": "Changelog API for the FE \"What's new\" modal: hexagonal ports, GET /api/v1/changelog from embedded JSON seed, and merge workflow to append Major/Mirror entries.",
