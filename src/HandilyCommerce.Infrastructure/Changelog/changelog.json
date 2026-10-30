@@ -1,5 +1,14 @@
 [
   {
+    "id": "79bb63d7-ed29-4c7a-883e-5370549ffe46",
+    "title": "feat(leads): reenvio durável do e-mail de lead (retry com backoff)",
+    "summary": "## Resumo Torna o e-mail de notificação de lead **durável**: nenhum e-mail se perde em restart do Render nem em falha temporária do Resend.",
+    "productVersion": "0.14.0",
+    "mergedAt": "2026-10-30T21:08:46Z",
+    "prNumber": 59,
+    "label": "Release Mirror"
+  },
+  {
     "id": "a10c0000-0011-4000-8000-00000000000b",
     "title": "feat: changelog API for Major/Mirror releases",
     "summary": "Changelog API for the FE \"What's new\" modal: hexagonal ports, GET /api/v1/changelog from embedded JSON seed, and merge workflow to append Major/Mirror entries.",
