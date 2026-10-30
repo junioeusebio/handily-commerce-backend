@@ -70,5 +70,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(auth);
         services.AddSingleton<IPasswordVerifier, Pbkdf2PasswordVerifier>();
         services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
+        services.AddScoped<IRefreshTokenRepository, EfRefreshTokenRepository>();
     }
 }

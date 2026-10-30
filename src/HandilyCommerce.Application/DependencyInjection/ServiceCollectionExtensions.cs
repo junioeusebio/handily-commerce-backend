@@ -37,6 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<LeadNotificationService>();
         services.TryAddSingleton(new AuthOptions());
         services.AddScoped<IAuthPort, AuthService>();
+        services.AddScoped<ISessionPort, SessionService>();
         services.AddScoped<ILeadAdminPort, LeadAdminService>();
         services.AddScoped<ICourseAdminPort, CourseAdminService>();
         services.AddScoped<IProductAdminPort, ProductAdminService>();

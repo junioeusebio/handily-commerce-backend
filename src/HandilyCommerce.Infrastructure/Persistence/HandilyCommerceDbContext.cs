@@ -1,8 +1,10 @@
+using HandilyCommerce.Domain.Auth;
 using HandilyCommerce.Domain.Changelog;
 using HandilyCommerce.Domain.Courses;
 using HandilyCommerce.Domain.Leads;
 using HandilyCommerce.Domain.Notifications;
 using HandilyCommerce.Domain.Products;
+using HandilyCommerce.Infrastructure.Auth;
 using HandilyCommerce.Infrastructure.Courses;
 using HandilyCommerce.Infrastructure.Leads;
 using HandilyCommerce.Infrastructure.Notifications;
@@ -27,6 +29,8 @@ public sealed class HandilyCommerceDbContext(DbContextOptions<HandilyCommerceDbC
     public DbSet<Lead> Leads => Set<Lead>();
 
     public DbSet<EmailSendLog> EmailSendLogs => Set<EmailSendLog>();
+
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -69,5 +73,7 @@ public sealed class HandilyCommerceDbContext(DbContextOptions<HandilyCommerceDbC
         modelBuilder.Entity<Lead>(LeadModel.Configure);
 
         modelBuilder.Entity<EmailSendLog>(EmailSendLogModel.Configure);
+
+        modelBuilder.Entity<RefreshToken>(RefreshTokenModel.Configure);
     }
 }

@@ -5,6 +5,7 @@ using System.Text.Json;
 using HandilyCommerce.Infrastructure.Auth;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 
 namespace HandilyCommerce.Api.Tests.Auth;
 
@@ -15,11 +16,14 @@ public class AuthEndpointsTests(WebApplicationFactory<Program> factory)
     private const string Password = "senha-de-teste";
     private static readonly string Hash = Pbkdf2PasswordVerifier.Hash(Password, iterations: 1000);
 
-    private HttpClient CreateClient(bool configured = true) =>
-        factory.WithWebHostBuilder(builder =>
+    private HttpClient CreateClient(bool configured = true, string? database = null)
+    {
+        database ??= Guid.NewGuid().ToString();
+        return factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
             builder.UseSetting("ConnectionStrings:Default", "");
+            builder.ConfigureTestServices(services => InMemoryDb.Use(services, database));
             if (configured)
             {
                 builder.UseSetting("Auth:AdminEmail", Email);
@@ -27,6 +31,7 @@ public class AuthEndpointsTests(WebApplicationFactory<Program> factory)
                 builder.UseSetting("Auth:JwtKey", "chave-de-teste-com-pelo-menos-32-bytes!!");
             }
         }).CreateClient();
+    }
 
     [Fact]
     public async Task Me_WithoutToken_Returns401()

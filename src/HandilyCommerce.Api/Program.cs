@@ -71,7 +71,8 @@ builder.Services.AddCors(options =>
                 "http://localhost:4200",
                 "https://localhost:4200")
             .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-            .WithHeaders("Authorization", "Content-Type", "Accept");
+            .WithHeaders("Authorization", "Content-Type", "Accept", SessionCookie.CsrfHeader)
+            .AllowCredentials();
     });
 });
 
@@ -143,8 +144,7 @@ var changelogPath = apiOptions.Path("changelog");
 var productsPath = apiOptions.Path("products");
 var coursesPath = apiOptions.Path("courses");
 var leadsPath = apiOptions.Path("leads");
-var loginPath = apiOptions.Path("auth", "login");
-var mePath = apiOptions.Path("auth", "me");
+var authPath = apiOptions.Path("auth");
 var adminPath = apiOptions.Path("admin");
 
 if (app.Logger.IsEnabled(LogLevel.Information))
@@ -249,7 +249,7 @@ app.MapPost(leadsPath, (CreateLeadCommand command, ILeadPort leadPort) =>
     .RequireRateLimiting(LeadRateLimiting.PolicyName);
 
 // Auth stub (C1): admin from Auth__* env; GET auth/me proves the bearer guard.
-app.MapAuthEndpoints(loginPath, mePath);
+app.MapAuthEndpoints(authPath);
 
 // Admin area (bearer only): leads, catalog management and dashboard summary.
 app.MapAdminEndpoints(adminPath);

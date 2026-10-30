@@ -43,7 +43,7 @@ public sealed class AuthService(
         var passwordMatches = passwordVerifier.Verify(password, options.AdminPasswordHash!);
 
         return emailMatches && passwordMatches
-            ? LoginResult.Success(tokenIssuer.Issue(options.AdminEmail.Trim()))
+            ? LoginResult.Success(tokenIssuer.Issue(options.AdminEmail.Trim()), options.AdminEmail.Trim())
             : LoginResult.Unauthorized();
     }
 }

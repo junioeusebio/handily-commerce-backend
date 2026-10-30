@@ -19,6 +19,9 @@ public sealed class AuthOptions
 
     public int ExpiresMinutes { get; set; } = 60;
 
+    /// <summary>Admin session renewal window in days (default 7).</summary>
+    public int RefreshDays { get; set; } = 7;
+
     /// <summary>Login is enabled only when admin e-mail, password hash and JWT key are all set.</summary>
     public bool IsConfigured =>
         !string.IsNullOrWhiteSpace(AdminEmail)
@@ -41,6 +44,11 @@ public sealed class AuthOptions
         if (ExpiresMinutes is < 1 or > 1440)
         {
             throw new InvalidOperationException("Auth:ExpiresMinutes must be between 1 and 1440.");
+        }
+
+        if (RefreshDays is < 1 or > 90)
+        {
+            throw new InvalidOperationException("Auth:RefreshDays must be between 1 and 90.");
         }
     }
 }
