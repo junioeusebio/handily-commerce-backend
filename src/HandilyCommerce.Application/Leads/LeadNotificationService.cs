@@ -1,5 +1,6 @@
 using HandilyCommerce.Domain.Leads;
 using HandilyCommerce.Domain.Notifications;
+using Microsoft.Extensions.Logging;
 
 namespace HandilyCommerce.Application.Leads;
 
@@ -7,15 +8,32 @@ namespace HandilyCommerce.Application.Leads;
 /// Durable "new lead" e-mail: a <see cref="EmailSendStatus.Pending"/> row is stored with the lead, then
 /// <see cref="ProcessDueAsync"/> claims due rows, rebuilds the e-mail from the <c>Leads</c> row and sends it.
 /// Transient failures are retried with exponential backoff; never throws because of the provider.
+/// After a durable save to <see cref="EmailSendStatus.Failed"/> or <see cref="EmailSendStatus.GivenUp"/>,
+/// emits <see cref="TerminalFailureEventName"/> (Warning, no personal data). See
+/// <c>docs/observabilidade-falha-terminal-email.md</c>.
 /// </summary>
-public sealed class LeadNotificationService(
+public sealed partial class LeadNotificationService(
     IEmailSender sender,
     IEmailSendLogRepository logRepository,
     ILeadRepository leadRepository,
     LeadNotificationOptions options,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ILogger<LeadNotificationService> logger)
 {
     public const int ErrorMaxLength = 1000;
+
+    /// <summary>Stable MEL event id for a durable Failed/GivenUp transition. Not an HTTP status.</summary>
+    public const int TerminalFailureEventId = 6102;
+
+    /// <summary>Stable event name. Also the literal prefix of <see cref="TerminalFailureMessageTemplate"/>.</summary>
+    public const string TerminalFailureEventName = "LeadNotificationTerminalFailure";
+
+    /// <summary>
+    /// Message template pushed to Loki. Placeholders are the only structured fields: status, attempt count,
+    /// and internal ids. Never add addresses, names, phones, bodies, provider errors, or secrets.
+    /// </summary>
+    public const string TerminalFailureMessageTemplate =
+        "LeadNotificationTerminalFailure Status={Status} AttemptCount={AttemptCount} EmailSendLogId={EmailSendLogId} LeadId={LeadId}";
 
     /// <summary>Row persisted on lead creation (first attempt due immediately).</summary>
     public static EmailSendLog NewPending(Lead lead, LeadNotificationOptions options, string provider, DateTimeOffset now)
@@ -36,11 +54,24 @@ public sealed class LeadNotificationService(
 
         foreach (var log in claimed)
         {
-            await logRepository.UpdateAsync(await AttemptAsync(log, cancellationToken), cancellationToken);
+            var updated = await AttemptAsync(log, cancellationToken);
+            await logRepository.UpdateAsync(updated, cancellationToken);
+            if (log.IsOpen && updated.Status is EmailSendStatus.Failed or EmailSendStatus.GivenUp)
+            {
+                // Only after the terminal status is saved. Polling cannot claim a final row, and a failed save throws first.
+                LogTerminalFailure(updated.Status.ToString(), updated.AttemptCount, updated.Id, updated.LeadId);
+            }
         }
 
         return claimed.Count;
     }
+
+    [LoggerMessage(
+        EventId = TerminalFailureEventId,
+        EventName = TerminalFailureEventName,
+        Level = LogLevel.Warning,
+        Message = TerminalFailureMessageTemplate)]
+    private partial void LogTerminalFailure(string status, int attemptCount, Guid emailSendLogId, Guid? leadId);
 
     public async Task<EmailSendLog> AttemptAsync(EmailSendLog log, CancellationToken cancellationToken)
     {

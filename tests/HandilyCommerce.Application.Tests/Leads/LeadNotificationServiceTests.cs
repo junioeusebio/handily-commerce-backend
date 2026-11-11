@@ -2,6 +2,7 @@ using HandilyCommerce.Application.Leads;
 using HandilyCommerce.Application.Tests.Fakes;
 using HandilyCommerce.Domain.Leads;
 using HandilyCommerce.Domain.Notifications;
+using Microsoft.Extensions.Logging;
 
 namespace HandilyCommerce.Application.Tests.Leads;
 
@@ -17,8 +18,9 @@ public class LeadNotificationServiceTests
         public InMemoryLeadRepository Leads { get; } = new();
         public MutableTimeProvider Clock { get; } = new(Now);
         public LeadNotificationOptions Options { get; } = new() { MaxAttempts = 3, BaseDelaySeconds = 10 };
+        public CapturingLogger Logger { get; } = new();
 
-        public LeadNotificationService Sut => new(Sender, Logs, Leads, Options, Clock);
+        public LeadNotificationService Sut => new(Sender, Logs, Leads, Options, Clock, Logger);
 
         public EmailSendLog Seed()
         {
@@ -218,6 +220,215 @@ public class LeadNotificationServiceTests
     }
 
     [Fact]
+    public async Task ProcessDue_TerminalFailed_EmitsOnceAfterSave_AndNotOnLaterPoll()
+    {
+        var ctx = Create(_ => EmailSendResult.Failed("HTTP 422: invalid"));
+        var pending = ctx.Seed();
+        var savedBeforeLog = false;
+        ctx.Logger.OnLog = () =>
+        {
+            Assert.Equal(EmailSendStatus.Failed, ctx.Logs.Logs.Single().Status);
+            savedBeforeLog = true;
+        };
+
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+
+        var entry = Assert.Single(ctx.Logger.Entries);
+        Assert.True(savedBeforeLog);
+        AssertTerminalFailure(entry, "Failed", 1, pending.Id, Lead.Id);
+
+        ctx.Clock.Now = Now.AddDays(1);
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+
+        Assert.Single(ctx.Logger.Entries);
+        Assert.Equal(1, ctx.Sender.Calls);
+    }
+
+    [Fact]
+    public async Task ProcessDue_GivenUp_EmitsOnlyOnFinalTransition()
+    {
+        var ctx = Create(_ => EmailSendResult.Failed("HTTP 503: down", retryable: true));
+        var pending = ctx.Seed();
+
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+        Assert.Empty(ctx.Logger.Entries);
+        Assert.Equal(EmailSendStatus.Retrying, ctx.Logs.Logs.Single().Status);
+
+        ctx.Clock.Now = Now.AddSeconds(10);
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+        Assert.Empty(ctx.Logger.Entries);
+
+        ctx.Clock.Now = ctx.Clock.Now.AddSeconds(20);
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+
+        var entry = Assert.Single(ctx.Logger.Entries);
+        AssertTerminalFailure(entry, "GivenUp", 3, pending.Id, Lead.Id);
+        Assert.Equal(EmailSendStatus.GivenUp, ctx.Logs.Logs.Single().Status);
+
+        ctx.Clock.Now = ctx.Clock.Now.AddDays(1);
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+        Assert.Single(ctx.Logger.Entries);
+    }
+
+    [Fact]
+    public async Task ProcessDue_RetryThenNonRetryable_EmitsOnlyFinalFailed()
+    {
+        var calls = 0;
+        var ctx = Create(_ => ++calls == 1
+            ? EmailSendResult.Failed("HTTP 429: slow down", retryable: true)
+            : EmailSendResult.Failed("HTTP 422: invalid"));
+        var pending = ctx.Seed();
+
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+        Assert.Empty(ctx.Logger.Entries);
+
+        ctx.Clock.Now = Now.AddMinutes(5);
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+
+        var entry = Assert.Single(ctx.Logger.Entries);
+        AssertTerminalFailure(entry, "Failed", 2, pending.Id, Lead.Id);
+        Assert.Equal(EmailSendStatus.Failed, ctx.Logs.Logs.Single().Status);
+    }
+
+    [Fact]
+    public async Task ProcessDue_Success_DoesNotEmitTerminalFailure()
+    {
+        var ctx = Create(_ => EmailSendResult.Sent("msg-1"));
+        ctx.Seed();
+
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+
+        Assert.Equal(EmailSendStatus.Sent, ctx.Logs.Logs.Single().Status);
+        Assert.Empty(ctx.Logger.Entries);
+    }
+
+    [Fact]
+    public async Task ProcessDue_Skipped_DoesNotEmitTerminalFailure()
+    {
+        var ctx = Create(_ => EmailSendResult.Skipped("no key"));
+        ctx.Seed();
+
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+
+        Assert.Equal(EmailSendStatus.Skipped, ctx.Logs.Logs.Single().Status);
+        Assert.Empty(ctx.Logger.Entries);
+    }
+
+    [Fact]
+    public async Task ProcessDue_Retrying_DoesNotEmitTerminalFailure()
+    {
+        var ctx = Create(_ => EmailSendResult.Failed("HTTP 503: down", retryable: true));
+        ctx.Options.MaxAttempts = 5;
+        ctx.Seed();
+
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+
+        Assert.Equal(EmailSendStatus.Retrying, ctx.Logs.Logs.Single().Status);
+        Assert.Empty(ctx.Logger.Entries);
+    }
+
+    [Fact]
+    public async Task ProcessDue_SaveThrows_DoesNotEmit_AndLeavesRowOpen()
+    {
+        const string sentinel = "SENTINEL_SAVE_NOME_ALICE";
+        var ctx = Create(_ => EmailSendResult.Failed($"HTTP 422: {sentinel}"));
+        ctx.Seed();
+        ctx.Logs.UpdateException = new InvalidOperationException($"db down {sentinel}");
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => ctx.Sut.ProcessDueAsync(CancellationToken.None));
+
+        Assert.Contains(sentinel, ex.Message, StringComparison.Ordinal);
+        Assert.Empty(ctx.Logger.Entries);
+        Assert.Equal(EmailSendStatus.Pending, ctx.Logs.Logs.Single().Status);
+    }
+
+    [Theory]
+    [InlineData(EmailSendStatus.Failed)]
+    [InlineData(EmailSendStatus.GivenUp)]
+    public async Task ProcessDue_ClaimedFinalRow_DoesNotEmitAgain(EmailSendStatus status)
+    {
+        var ctx = Create(_ => EmailSendResult.Sent("x"));
+        var row = ctx.Seed() with { Status = status, NextAttemptAtUtc = Now, AttemptCount = 4 };
+        ctx.Logs.Logs[0] = row;
+        ctx.Logs.IncludeTerminalRows = true;
+
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+
+        Assert.Empty(ctx.Logger.Entries);
+        Assert.Equal(0, ctx.Sender.Calls);
+        Assert.Equal(status, ctx.Logs.Logs.Single().Status);
+    }
+
+    [Fact]
+    public async Task ProcessDue_MissingLead_EmitsFailedWithoutErrorText()
+    {
+        const string sentinelAddress = "sentinel.destinatario@example.invalid";
+        const string sentinelSubject = "SENTINEL_ASSUNTO";
+        var ctx = Create(_ => EmailSendResult.Sent("should-not-send"));
+        ctx.Options.To = sentinelAddress;
+        ctx.Options.Subject = sentinelSubject;
+        var pending = LeadNotificationService.NewPending(Lead, ctx.Options, "Fake", Now) with { LeadId = null };
+        ctx.Logs.Logs.Add(pending);
+
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+
+        var stored = ctx.Logs.Logs.Single();
+        Assert.Equal(EmailSendStatus.Failed, stored.Status);
+        Assert.Equal("Lead não encontrado.", stored.ErrorMessage);
+        Assert.Equal(0, stored.AttemptCount);
+        var entry = Assert.Single(ctx.Logger.Entries);
+        AssertTerminalFailure(entry, "Failed", 0, pending.Id, null);
+        AssertNoSentinels(entry, sentinelAddress, sentinelSubject, "Lead não encontrado.", Lead.Name, Lead.Email);
+    }
+
+    [Fact]
+    public async Task ProcessDue_Privacy_OmitsSentinelPersonalData()
+    {
+        const string sentinelName = "SENTINEL_NOME_ALICE";
+        const string sentinelEmail = "sentinel.alice@example.invalid";
+        const string sentinelPhone = "11988887777";
+        const string sentinelPhoneFormatted = "(11) 98888-7777";
+        const string sentinelCity = "SENTINEL_CIDADE";
+        const string sentinelBody = "SENTINEL_MENSAGEM_CORPO";
+        const string sentinelTo = "sentinel.destinatario@example.invalid";
+        const string sentinelSubject = "SENTINEL_ASSUNTO";
+        const string sentinelSecret = "glc_SENTINEL_SECRET";
+        const string sentinelProviderId = "SENTINEL_PROVIDER_ID";
+        var lead = new Lead(Guid.NewGuid(), sentinelName, sentinelEmail, sentinelCity, sentinelBody, Now, Phone: sentinelPhone);
+        var ctx = Create(_ => EmailSendResult.Failed(
+            $"to={sentinelTo} name={sentinelName} mail={sentinelEmail} phone={sentinelPhone} {sentinelPhoneFormatted} city={sentinelCity} body={sentinelBody} subject={sentinelSubject} secret={sentinelSecret}",
+            retryable: false) with { ProviderMessageId = sentinelProviderId });
+        ctx.Options.To = sentinelTo;
+        ctx.Options.Subject = sentinelSubject;
+        ctx.Leads.Add(lead);
+        var pending = LeadNotificationService.NewPending(lead, ctx.Options, "Fake", Now);
+        ctx.Logs.Logs.Add(pending);
+
+        await ctx.Sut.ProcessDueAsync(CancellationToken.None);
+
+        var stored = ctx.Logs.Logs.Single();
+        Assert.Equal(EmailSendStatus.Failed, stored.Status);
+        Assert.Contains(sentinelSecret, stored.ErrorMessage, StringComparison.Ordinal);
+        Assert.Equal(sentinelTo, stored.ToAddress);
+        Assert.Contains(sentinelName, ctx.Sender.Last!.HtmlBody, StringComparison.Ordinal);
+        var entry = Assert.Single(ctx.Logger.Entries);
+        AssertTerminalFailure(entry, "Failed", 1, pending.Id, lead.Id);
+        AssertNoSentinels(
+            entry,
+            sentinelName,
+            sentinelEmail,
+            sentinelPhone,
+            sentinelPhoneFormatted,
+            sentinelCity,
+            sentinelBody,
+            sentinelTo,
+            sentinelSubject,
+            sentinelSecret,
+            sentinelProviderId,
+            "HTTP 422");
+    }
+
+    [Fact]
     public void Template_NullMessage_ShowsDash()
     {
         Assert.Contains("—", LeadEmailTemplate.Build(Lead));
@@ -268,10 +479,14 @@ public class LeadNotificationServiceTests
             return Task.CompletedTask;
         }
 
+        public bool IncludeTerminalRows { get; set; }
+
+        public Exception? UpdateException { get; set; }
+
         public Task<IReadOnlyList<EmailSendLog>> ClaimDueAsync(
             DateTimeOffset now, DateTimeOffset leaseUntil, int max, CancellationToken cancellationToken)
         {
-            var due = Logs.Where(l => l.IsOpen && l.NextAttemptAtUtc <= now).Take(max).ToList();
+            var due = Logs.Where(l => (l.IsOpen || IncludeTerminalRows) && l.NextAttemptAtUtc <= now).Take(max).ToList();
             var claimed = due.Select(l => l with { NextAttemptAtUtc = leaseUntil }).ToList();
             foreach (var c in claimed)
             {
@@ -283,8 +498,82 @@ public class LeadNotificationServiceTests
 
         public Task UpdateAsync(EmailSendLog log, CancellationToken cancellationToken)
         {
+            if (UpdateException is not null)
+            {
+                throw UpdateException;
+            }
+
             Logs[Logs.FindIndex(l => l.Id == log.Id)] = log;
             return Task.CompletedTask;
+        }
+    }
+
+    private static void AssertTerminalFailure(
+        CapturedLog entry, string status, int attemptCount, Guid emailSendLogId, Guid? leadId)
+    {
+        Assert.Equal(LogLevel.Warning, entry.Level);
+        Assert.Equal(LeadNotificationService.TerminalFailureEventId, entry.EventId.Id);
+        Assert.Equal(LeadNotificationService.TerminalFailureEventName, entry.EventId.Name);
+        Assert.Null(entry.Exception);
+        Assert.Equal(status, entry.Properties["Status"]);
+        Assert.Equal(attemptCount.ToString(), entry.Properties["AttemptCount"]);
+        Assert.Equal(emailSendLogId.ToString(), entry.Properties["EmailSendLogId"]);
+        Assert.Equal(leadId?.ToString(), entry.Properties["LeadId"]);
+        Assert.Equal(LeadNotificationService.TerminalFailureMessageTemplate, entry.Properties["{OriginalFormat}"]);
+        Assert.Equal(
+            ["AttemptCount", "EmailSendLogId", "LeadId", "Status", "{OriginalFormat}"],
+            entry.Properties.Keys.Order(StringComparer.Ordinal).ToArray());
+        Assert.Contains(LeadNotificationService.TerminalFailureEventName, entry.Message, StringComparison.Ordinal);
+        Assert.Contains($"Status={status}", entry.Message, StringComparison.Ordinal);
+        Assert.Contains($"AttemptCount={attemptCount}", entry.Message, StringComparison.Ordinal);
+    }
+
+    private static void AssertNoSentinels(CapturedLog entry, params string[] sentinels)
+    {
+        var blob = string.Join(
+            "\n",
+            new[] { entry.Message, entry.Exception?.ToString() }.Concat(entry.Properties.Select(p => p.Key + "=" + p.Value)));
+        foreach (var sentinel in sentinels)
+        {
+            Assert.DoesNotContain(sentinel, blob, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    private sealed record CapturedLog(
+        LogLevel Level,
+        EventId EventId,
+        string Message,
+        Exception? Exception,
+        Dictionary<string, string?> Properties);
+
+    private sealed class CapturingLogger : ILogger<LeadNotificationService>
+    {
+        public List<CapturedLog> Entries { get; } = [];
+
+        public Action? OnLog { get; set; }
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            OnLog?.Invoke();
+            var properties = new Dictionary<string, string?>(StringComparer.Ordinal);
+            if (state is IEnumerable<KeyValuePair<string, object?>> pairs)
+            {
+                foreach (var pair in pairs)
+                {
+                    properties[pair.Key] = pair.Value?.ToString();
+                }
+            }
+
+            Entries.Add(new CapturedLog(logLevel, eventId, formatter(state, exception), exception, properties));
         }
     }
 
