@@ -18,12 +18,18 @@ public static class LoggingSetup
     private const string ConsoleTemplate =
         "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}: {Message:lj} {TraceId}{NewLine}{Exception}";
 
+    /// <summary>Configures console logging and, when Grafana Loki settings are present, the Loki sink.</summary>
     /// <returns><c>true</c> when the Loki sink was added.</returns>
+    /// <param name="lokiHttpMessageHandler">
+    /// Transport for the Loki sink. Production omits it. Tests pass a handler to capture the push body
+    /// without contacting Grafana. Null keeps the sink's default handler.
+    /// </param>
     public static bool Configure(
         LoggerConfiguration logger,
         IConfiguration configuration,
         string environmentName,
-        string productVersion)
+        string productVersion,
+        HttpMessageHandler? lokiHttpMessageHandler = null)
     {
         logger
             .MinimumLevel.Information()
@@ -50,7 +56,8 @@ public static class LoggingSetup
                 new LokiLabel { Key = "env", Value = environmentName.ToLowerInvariant() }
             ],
             credentials: new LokiCredentials { Login = loki.Login!, Password = loki.Password! },
-            traceIdMode: LokiFieldDestination.Body);
+            traceIdMode: LokiFieldDestination.Body,
+            httpMessageHandler: lokiHttpMessageHandler);
         return true;
     }
 

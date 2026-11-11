@@ -133,6 +133,8 @@ src/
 
 Logs always go to the console and, when enabled, to a hosted log backend. Unhandled errors return `application/problem+json` with a `traceId` (no exception details); search that `traceId` in the log UI to find the error. Configure via the service's environment variables (see your private notes).
 
+Durable lead-email rows that reach `Failed` or `GivenUp` emit one Warning event, `LeadNotificationTerminalFailure`, with no personal data. Contract and suggested LogQL (not verified in production): [docs/observabilidade-falha-terminal-email.md](docs/observabilidade-falha-terminal-email.md).
+
 ## Auth
 
 A login endpoint issues a short-lived JWT used by protected routes; catalog, courses, leads and ping stay public. Credentials and signing keys are configured via the service's environment variables (see your private notes) — never in the repo.

@@ -69,6 +69,7 @@ Dependency direction: **Api → Application + Infrastructure → Domain** (Infra
 - **Global exception handler** (`Observability/GlobalExceptionHandler`, `IExceptionHandler` + `AddProblemDetails`): logs `Unhandled exception on {Method} {Path} (traceId {TraceId})` with the exception, and answers `application/problem+json` 500 with `traceId` and no exception details. CORS headers are preserved on errors so the FE can read the status.
 - **Hosted log UI** via a Serilog sink, enabled only when its settings are configured via the service's environment variables (see your private notes). Local runs and CI log to console only. Push failures surface on stderr via Serilog SelfLog; logs are flushed on shutdown.
 - Secrets: configuration / connection strings are never logged; EF sensitive data logging stays off.
+- **Lead e-mail terminal outcome:** when an `EmailSendLogs` row is durably saved as `Failed` or `GivenUp`, the app emits one Warning event `LeadNotificationTerminalFailure` (no personal data, not repeated on poll). Contract and suggested LogQL: [docs/observabilidade-falha-terminal-email.md](docs/observabilidade-falha-terminal-email.md).
 
 ## CORS
 

@@ -8,6 +8,7 @@ using HandilyCommerce.Infrastructure.Notifications;
 using HandilyCommerce.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace HandilyCommerce.Infrastructure.Tests.Notifications;
@@ -108,6 +109,7 @@ public class NotificationsInfrastructureTests
     private static ServiceProvider BuildProvider(string dbName, HttpStatusCode status, string body = """{"id":"m1"}""")
     {
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddDbContext<HandilyCommerceDbContext>(o => o.UseInMemoryDatabase(dbName));
         services.AddScoped<IEmailSendLogRepository, EfEmailSendLogRepository>();
         services.AddScoped<ILeadRepository, EfLeadRepository>();
